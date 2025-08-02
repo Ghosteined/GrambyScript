@@ -49,7 +49,7 @@ class CompileStack:
     
     def terminate(self):
         encoded = base64.b64encode(json.dumps(self._stack).encode('utf-8'))
-        return encoded
+        return encoded.decode('utf-8')
 
 class BaseItem:
     Attachments = {}
