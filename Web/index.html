@@ -162,7 +162,7 @@
         <pre id="output-area"></pre>
     </div>
 
-    <script>
+        <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- Existing Editor Elements ---
         const editorInput = document.getElementById('editor-input');
@@ -170,7 +170,7 @@
         const codeElement = highlighter.querySelector('code');
         const autocompleteBox = document.getElementById('autocomplete-box');
         
-        // --- NEW: Generation Elements ---
+        // --- Generation Elements ---
         const generateButton = document.getElementById('generate-button');
         const outputArea = document.getElementById('output-area');
         const copyMessage = document.getElementById('copy-message');
@@ -252,7 +252,7 @@ output RESULT = A xor B;`;
             document.body.removeChild(mirror); return { top, left };
         }
 
-        // --- NEW: API Call Logic ---
+        // --- UPDATED: API Call Logic using AllOrigins Proxy ---
         const handleGenerateClick = async () => {
             const code = editorInput.value.trim();
             if (!code) {
@@ -267,34 +267,46 @@ output RESULT = A xor B;`;
             outputArea.textContent = '';
             outputArea.className = '';
             copyMessage.classList.remove('visible');
-
-            const encodedCode = encodeURIComponent(code);
-            const url = `http://wintr.wisp.uno:12974/generate?code=${encodedCode}`;
+            
+            // 1. Your original insecure URL
+            const originalUrl = `http://wintr.wisp.uno:12974/generate?code=${encodeURIComponent(code)}`;
+            
+            // 2. The new secure proxy URL
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(originalUrl)}`;
 
             try {
-                const response = await fetch(url);
-                const resultText = await response.text();
+                // 3. Fetch from the secure proxy
+                const response = await fetch(proxyUrl);
+                
+                // 4. AllOrigins always returns 200 OK, we must parse the JSON to get the real status
+                if (!response.ok) {
+                    throw new Error(`Proxy error: Server responded with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // 'data.contents' holds the actual response from your server.
+                const resultText = data.contents;
 
-                if (response.ok) { // Status code is 200-299
+                // 'data.status.http_code' holds the *real* status code from your server.
+                if (data.status.http_code === 200) {
                     outputArea.textContent = resultText;
                     outputArea.className = 'success';
                     
-                    // Copy to clipboard and show message
                     await navigator.clipboard.writeText(resultText);
                     copyMessage.classList.add('visible');
-                    // Hide the message after 3 seconds
                     setTimeout(() => copyMessage.classList.remove('visible'), 3000);
 
                 } else {
-                    outputArea.textContent = resultText || `Error: Server responded with status ${response.status}`;
+                    // This handles rate-limiting errors (429) or other errors from your Python server.
+                    outputArea.textContent = resultText || `Error: Your server responded with status ${data.status.http_code}`;
                     outputArea.className = 'error';
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
-                outputArea.textContent = 'Network Error: Could not connect to the generation server. Please check your connection or if the server is running.';
+                outputArea.textContent = 'Network Error: Could not connect to the proxy or the generation server. Please try again.';
                 outputArea.className = 'error';
             } finally {
-                // Reset button state
                 generateButton.disabled = false;
                 generateButton.textContent = 'Generate';
             }
