@@ -1,6 +1,7 @@
 # Grambyscript
 
 Grambyscript is a minimalistic logic programming language inspired by the game *Road to Gramby's*. It is designed for defining logic circuits using a strict, readable syntax.
+You can try it out [Here](https://ghosteined.github.io/GrambyScript/Web/) !
 
 ---
 
