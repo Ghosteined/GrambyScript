@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grambyscript Editor</title>
+    
+    <!-- Prism.js library for robust syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+    <style>
+        /* --- Base Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #282c34;
+            --editor-bg: #21252b;
+            --text-color: #abb2bf;
+            --caret-color: #528bff;
+            --border-color: #4b5263;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --green-color: #28a745;
+            --red-color: #dc3545;
+
+            /* --- Syntax Colors --- */
+            --comment-color: #6a9955;
+            --keyword-io-color: #f92672;
+            --keyword-gate-color: #fd971f;
+            --variable-color: #ffffff;
+            --punctuation-color: #56b6c2;
+            
+            --autocomplete-bg: #2c313a;
+            --autocomplete-hover: #3e4451;
+            --autocomplete-border: #4b5263;
+        }
+
+        /* --- Base Theme (Prism Okaidia, modified) --- */
+        code[class*="language-"], pre[class*="language-"] {
+            color: #f8f8f2; background: none; font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            text-align: left; white-space: pre; word-spacing: normal; word-break: normal; word-wrap: normal; line-height: 1.8;
+            font-size: 16px; -moz-tab-size: 4; -o-tab-size: 4; tab-size: 4; -webkit-hyphens: none; -moz-hyphens: none; -ms-hyphens: none; hyphens: none;
+        }
+
+        /* --- Custom Color Overrides --- */
+        .token.comment { color: var(--comment-color); font-style: italic; }
+        .token.keyword-io { color: var(--keyword-io-color); font-weight: bold; }
+        .token.keyword-gate { color: var(--keyword-gate-color); }
+        .token.variable { color: var(--variable-color); }
+        .token.punctuation, .token.operator { color: var(--punctuation-color); }
+
+        /* --- General Page Styles --- */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 2rem;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        header { text-align: center; margin-bottom: 2rem; }
+        h1 { font-family: 'Inter', sans-serif; font-weight: 700; color: #fff; margin: 0; }
+        h1 .hash { color: var(--keyword-gate-color); }
+        header p { margin-top: 0.5rem; max-width: 60ch; line-height: 1.6; }
+
+        /* --- Editor Wrapper and Layers --- */
+        .editor-wrapper {
+            position: relative; width: 90%; max-width: 900px; height: 55vh; min-height: 350px;
+            background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color);
+        }
+        #editor-input, #highlighter {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 20px; margin: 0; overflow: auto; border-radius: 8px;
+        }
+        #editor-input {
+            z-index: 2; color: transparent; background: transparent; caret-color: var(--caret-color); outline: none; border: none; resize: none;
+            white-space: pre; font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; font-size: 16px; line-height: 1.8;
+        }
+        #highlighter { z-index: 1; pointer-events: none; }
+
+        /* --- Autocomplete --- */
+        #autocomplete-box {
+            position: fixed; display: none; z-index: 10; background-color: var(--autocomplete-bg); border: 1px solid var(--autocomplete-border);
+            border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); list-style: none; padding: 5px 0; margin: 0; max-height: 200px;
+            overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 14px;
+        }
+        #autocomplete-box li { padding: 6px 12px; cursor: pointer; color: var(--text-color); }
+        #autocomplete-box li:hover, #autocomplete-box li.active { background-color: var(--autocomplete-hover); color: #fff; }
+        
+        /* --- NEW: Generation Controls --- */
+        .generation-container {
+            width: 90%;
+            max-width: 900px;
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #copy-message {
+            color: var(--text-color);
+            font-size: 14px;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        #copy-message.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        #generate-button {
+            background-color: var(--green-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        #generate-button:hover {
+            background-color: #218838; /* Darker green */
+        }
+        #generate-button:active {
+            transform: scale(0.98);
+        }
+        #generate-button:disabled {
+            background-color: #5a6268;
+            cursor: not-allowed;
+        }
+        #output-area {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--editor-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 50px;
+        }
+        #output-area.success { color: white; font-weight: bold; }
+        #output-area.error { color: var(--red-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><span class="hash">#</span> Grambyscript Editor</h1>
+        <p>A simple, pretty editor for the Grambyscript logic language, complete with syntax highlighting and autocompletion for variables and keywords.</p>
+    </header>
+
+    <div class="editor-wrapper">
+        <pre id="highlighter" class="language-gramby"><code class="language-gramby"></code></pre>
+        <textarea id="editor-input" class="language-gramby" spellcheck="false" autocomplete="off"></textarea>
+        <ul id="autocomplete-box"></ul>
+    </div>
+
+    <!-- NEW: Generation UI Elements -->
+    <div class="generation-container">
+        <div id="copy-message">Text copied to clipboard!</div>
+        <button id="generate-button">Generate</button>
+        <pre id="output-area"></pre>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Existing Editor Elements ---
+        const editorInput = document.getElementById('editor-input');
+        const highlighter = document.getElementById('highlighter');
+        const codeElement = highlighter.querySelector('code');
+        const autocompleteBox = document.getElementById('autocomplete-box');
+        
+        // --- NEW: Generation Elements ---
+        const generateButton = document.getElementById('generate-button');
+        const outputArea = document.getElementById('output-area');
+        const copyMessage = document.getElementById('copy-message');
+
+        // --- Define the Grambyscript language for Prism.js ---
+        Prism.languages.gramby = {
+            'comment': { pattern: /\/.*?\/|\/\//, greedy: true }, 'keyword-io': { pattern: /\b(input|output)\b/i, alias: 'keyword' },
+            'keyword-gate': { pattern: /\b(and|or|nand|nor|xor|xnor|not)\b/i, alias: 'keyword' }, 'variable': { pattern: /\b[A-Z][A-Z0-9_]*\b/ },
+            'operator': /[=]/, 'punctuation': /[();]/
+        };
+        const allKeywords = ['input', 'output', 'and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not'];
+
+        const initialCode = `/ Basic XOR logic example /
+input A;
+input B;
+output RESULT = A xor B;`;
+
+        const updateEditor = () => {
+            const text = editorInput.value;
+            codeElement.innerHTML = Prism.highlight(text, Prism.languages.gramby, 'gramby');
+            handleAutocomplete();
+        };
+
+        const syncScroll = () => {
+            highlighter.scrollTop = editorInput.scrollTop; highlighter.scrollLeft = editorInput.scrollLeft;
+        };
+
+        // --- Autocomplete Logic (Unchanged) ---
+        let activeSuggestionIndex = -1;
+        const getDefinedVariables = (t) => { const v = new Set(); let m; while ((m = /\b(?:input|output)?\s*([A-Z][A-Z0-9_]*)/g.exec(t)) !== null) {v.add(m[1]);} return Array.from(v); };
+        const getCurrentWord = (t, c) => (t.substring(0, c).match(/[\w_]+$/) || [''])[0];
+        const hideAutocomplete = () => { autocompleteBox.style.display = 'none'; };
+        const showAutocomplete = (suggestions) => {
+            if (!suggestions.length) { hideAutocomplete(); return; }
+            autocompleteBox.innerHTML = '';
+            suggestions.forEach(s => { const li = document.createElement('li'); li.textContent = s; li.addEventListener('mousedown', e => { e.preventDefault(); applySuggestion(s); }); autocompleteBox.appendChild(li); });
+            const { top, left } = getCaretCoordinates();
+            autocompleteBox.style.top = `${top}px`; autocompleteBox.style.left = `${left}px`;
+            autocompleteBox.style.display = 'block'; activeSuggestionIndex = -1;
+        };
+        const handleAutocomplete = () => {
+            const t = editorInput.value, c = editorInput.selectionStart, w = getCurrentWord(t, c);
+            if (w.length < 1) { hideAutocomplete(); return; }
+            const p = [...allKeywords, ...getDefinedVariables(t)];
+            const f = [...new Set(p.filter(i => i.toLowerCase().startsWith(w.toLowerCase()) && i.toLowerCase() !== w.toLowerCase()))];
+            showAutocomplete(f);
+        };
+        const applySuggestion = (s) => {
+            const t = editorInput.value, c = editorInput.selectionStart;
+            const m = t.substring(0, c).match(/[\w_]+$/);
+            if (m) {
+                const start = m.index;
+                editorInput.value = t.substring(0, start) + s + t.substring(c);
+                const newCaret = start + s.length;
+                editorInput.focus(); editorInput.setSelectionRange(newCaret, newCaret); updateEditor();
+            }
+            hideAutocomplete();
+        };
+        const handleKeydown = (e) => {
+            if (autocompleteBox.style.display === 'block') {
+                const items = autocompleteBox.querySelectorAll('li'); if (!items.length) return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length; } 
+                else if (e.key === 'ArrowUp') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length; } 
+                else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (activeSuggestionIndex > -1) applySuggestion(items[activeSuggestionIndex].textContent); else if (items.length > 0) applySuggestion(items[0].textContent); return; } 
+                else if (e.key === 'Escape') { hideAutocomplete(); return; }
+                items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex));
+            }
+        };
+        function getCaretCoordinates() {
+            const props = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth'];
+            const mirror = document.createElement('div'); const style = mirror.style; const computed = window.getComputedStyle(editorInput);
+            style.position = 'absolute'; style.left = '-9999px'; style.top = '0'; style.whiteSpace = 'pre-wrap';
+            props.forEach(p => { style[p] = computed[p]; }); document.body.appendChild(mirror);
+            mirror.textContent = editorInput.value.substring(0, editorInput.selectionStart);
+            const span = document.createElement('span'); span.textContent = '\u200b'; mirror.appendChild(span);
+            const rect = editorInput.getBoundingClientRect();
+            const top = rect.top + span.offsetTop + parseInt(computed.borderTopWidth) - editorInput.scrollTop + span.offsetHeight;
+            const left = rect.left + span.offsetLeft + parseInt(computed.borderLeftWidth) - editorInput.scrollLeft;
+            document.body.removeChild(mirror); return { top, left };
+        }
+
+        // --- NEW: API Call Logic ---
+        const handleGenerateClick = async () => {
+            const code = editorInput.value.trim();
+            if (!code) {
+                outputArea.textContent = 'Editor is empty. Write some code first!';
+                outputArea.className = 'error';
+                return;
+            }
+
+            // Set loading state
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+            outputArea.textContent = '';
+            outputArea.className = '';
+            copyMessage.classList.remove('visible');
+
+            const encodedCode = encodeURIComponent(code);
+            const url = `http://wintr.wisp.uno:12974/generate?code=${encodedCode}`;
+
+            try {
+                const response = await fetch(url);
+                const resultText = await response.text();
+
+                if (response.ok) { // Status code is 200-299
+                    outputArea.textContent = resultText;
+                    outputArea.className = 'success';
+                    
+                    // Copy to clipboard and show message
+                    await navigator.clipboard.writeText(resultText);
+                    copyMessage.classList.add('visible');
+                    // Hide the message after 3 seconds
+                    setTimeout(() => copyMessage.classList.remove('visible'), 3000);
+
+                } else {
+                    outputArea.textContent = resultText || `Error: Server responded with status ${response.status}`;
+                    outputArea.className = 'error';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                outputArea.textContent = 'Network Error: Could not connect to the generation server. Please check your connection or if the server is running.';
+                outputArea.className = 'error';
+            } finally {
+                // Reset button state
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate';
+            }
+        };
+
+        // --- Event Listeners ---
+        editorInput.addEventListener('input', updateEditor);
+        editorInput.addEventListener('scroll', syncScroll);
+        editorInput.addEventListener('keydown', handleKeydown);
+        editorInput.addEventListener('click', handleAutocomplete);
+        editorInput.addEventListener('blur', () => setTimeout(hideAutocomplete, 150));
+        generateButton.addEventListener('click', handleGenerateClick);
+
+        // --- Initial Load ---
+        editorInput.value = initialCode;
+        updateEditor();
+    });
+    </script>
+</body>
+</html>

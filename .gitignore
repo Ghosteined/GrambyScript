@@ -2,3 +2,4 @@ __pycache__/
 .vscode/
 desktop.ini
 compiler.py
+output.txt

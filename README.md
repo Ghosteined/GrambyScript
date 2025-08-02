@@ -82,10 +82,13 @@ Everything between the opening `/` and the closing `/` is ignored.
 
 ```gramsby
 / Basic XOR logic example /
+/ You can also use the xor gate /
 input A;
 input B;
+
 TEMP1 = A and (not B); / A and not B /
 TEMP2 = (not A) and B; / not A and B /
+
 output RESULT = TEMP1 or TEMP2;
 ```
 

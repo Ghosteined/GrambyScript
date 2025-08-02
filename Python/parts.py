@@ -8,7 +8,12 @@ class ConnectionConstants:
     wire_ball_attachment1: int = 1
     wire_ball_attachment2: int = 3
 
+    gyro_attachement: int = 1
+    label_attachment: int = 2
     label_cup: int = 1
+
+    short_stick_attachment: int = 2
+    short_stick_cup: int = 1
 
     connector_bottom_attachment: int = 5
     connector_top_cup: int = 4
@@ -150,20 +155,77 @@ class Connector(BaseItem):
     }
     Name = "Connector"
 
+class ShortStick(BaseItem):
+    Attachments = {
+        ConnectionConstants.short_stick_attachment: False
+    }
+    Cups = {
+        ConnectionConstants.short_stick_cup: False
+    }
+    Name = "ShortStick"
+
+class Gyro(BaseItem):
+    Attachments = {
+        ConnectionConstants.gyro_attachement: False
+    }
+    Name = "Gyro"
+
+    def compile(self, stack: CompileStack):
+        item = [self.Name]
+        self._compiled = True
+
+        for position in self._positions:
+            if isinstance(position[2], int):
+                continue
+            
+            if position[2]._id == -1:
+                raise Exception("All connections are not compiled !")
+            
+            position[2] = position[2]._id
+        
+        item.append(self._positions)
+
+        datas = {"Activated":True}
+        item.append(datas)
+
+        id = stack.append(item, self)
+        self._id = id
+
 class Label(BaseItem):
+    Attachments = {
+        ConnectionConstants.label_attachment: False
+    }
     Cups = {
         ConnectionConstants.label_cup: False,
     }
     Name = "InputSensor"
 
-    def __init__(self, text: str):
+    def __init__(self, text: str, rotationY: int = 0):
         super().__init__()
         self._str = text
+        self._rotationY = rotationY
 
     def compile(self, stack: CompileStack):
-        item = [self.Name,[],{"ActivationKey":self._str}]
+        item = [self.Name]
         self._compiled = True
+
+        for position in self._positions:
+            if isinstance(position[2], int):
+                continue
+            
+            if position[2]._id == -1:
+                raise Exception("All connections are not compiled !")
+            
+            position[2] = position[2]._id
         
+        item.append(self._positions)
+
+        datas = {"ActivationKey":self._str}
+
+        if self._rotationY != 0:
+            datas["OrientationY"] = self._rotationY
+        item.append(datas)
+
         id = stack.append(item, self)
         self._id = id
 

@@ -1,6 +1,7 @@
+import math
 import re
 
-from parts import Label, StackableWire, StackableSwitch, GateAND, GateOR, GateNOT
+from parts import Label, StackableWire, StackableSwitch, GateAND, GateOR, GateNOT, Connector, Gyro, ShortStick
 from parts import CompileStack, ConnectionConstants
 
 # Constants
@@ -55,7 +56,7 @@ class Parser:
         return re.fullmatch(r'[A-Z0-9_]+', s) is not None
 
     def _parse_statements(self, code: str):
-        code = re.sub(r'/.*?/', '', code)
+        code = re.sub(r'/.*?/', '', code, flags=re.DOTALL)
         
         segments = code.split(';')
         result = []
@@ -228,7 +229,7 @@ class Parser:
                 continue
 
             if line[1] != '=':
-                raise Exception("Variable definition must start with '='")
+                raise Exception("Variable definition must start with '=' \n Line: " + ' '.join(line))
             
             definition = line[2:]
             
@@ -263,20 +264,72 @@ class Parser:
     
     def Compile(self, compile_stack: CompileStack):
         variables = self._variables
-        print(variables)
 
+        platform_base_connector = Connector()
+        platform_stick1, platform_stick2 = ShortStick(), ShortStick()
+
+        platform_stick1.connect(platform_base_connector, ConnectionConstants.connector_front_cup)
+        platform_stick2.connect(platform_base_connector, ConnectionConstants.connector_back_cup)
+
+        platform_connector1, platform_connector2 = Connector(), Connector()
+        platform_connector1.connect(platform_stick1, ConnectionConstants.short_stick_cup)
+        platform_connector2.connect(platform_stick2, ConnectionConstants.short_stick_cup)
+
+        platform_stick3 = ShortStick()
+        platform_stick4 = ShortStick()
+
+        gyro1 = Gyro()
+        gyro1.connect(platform_base_connector, ConnectionConstants.connector_side_cup1)
+
+        gyro2 = Gyro()
+        gyro2.connect(platform_base_connector, ConnectionConstants.connector_side_cup2)
+
+        gyro3 = Gyro()
+        gyro3.connect(platform_connector1, ConnectionConstants.connector_top_cup)
+
+        gyro4 = Gyro()
+        gyro4.connect(platform_connector2, ConnectionConstants.connector_top_cup)
+
+        platform_stick3.connect(platform_connector1, ConnectionConstants.connector_front_cup)
+        platform_stick4.connect(platform_connector2, ConnectionConstants.connector_front_cup)
+
+        platform_base_connector.compile(compile_stack)
+
+        platform_stick1.compile(compile_stack)
+        platform_stick2.compile(compile_stack)
+
+        platform_connector1.compile(compile_stack)
+        platform_connector2.compile(compile_stack)
+
+        platform_stick3.compile(compile_stack)
+        platform_stick4.compile(compile_stack)
+        
+        gyro1.compile(compile_stack)
+        gyro2.compile(compile_stack)
+        gyro3.compile(compile_stack)
+        gyro4.compile(compile_stack)
+
+        base_connector = Connector()
+
+        base_connector.connect(platform_stick3, ConnectionConstants.short_stick_cup)
+        base_connector.compile(compile_stack)
+
+        gate_connectors = [base_connector]
+
+        inputs = []
+        outputs = []
         for variable_name, data in variables.items():
             variable_type = data['type']
             variable_value = data['value']
 
             if variable_type == 'input':
-                label = Label(variable_name)
+                label = Label(variable_name, - 90)
 
                 wire = StackableSwitch()
                 wire.connect(label, ConnectionConstants.label_cup)
 
-                label.compile(compile_stack)
                 data['wire'] = wire
+                inputs.append(label)
 
             elif variable_type == 'variable' or variable_type == 'temp' or variable_type == 'output':
                 gate = self._check_dict_matches(states, variable_value)
@@ -287,10 +340,10 @@ class Parser:
 
                     if variable_type == 'output':
                         output_wire = data['wire']
-                        label = Label(variable_name)
+                        label = Label(variable_name, 90)
                         
                         output_wire.connect(label, ConnectionConstants.label_cup)
-                        label.compile(compile_stack)
+                        outputs.append(label)
 
                     continue
 
@@ -318,15 +371,60 @@ class Parser:
                     output_wire = StackableWire()
                     output_wire.connect(gate_instance, ConnectionConstants.tri_gate_output)
                 
+                last_connector = gate_connectors[-1]
+                last_connector_cups = [k for k, v in gate_connectors[-1].cups.items() if not v]
+                last_connector_cups.remove(ConnectionConstants.connector_top_cup)
+
+                if len(last_connector_cups) == 0:
+                    last_connector = Connector()
+                    last_connector.connect(gate_connectors[-1], ConnectionConstants.connector_top_cup)
+                    last_connector.compile(compile_stack)
+
+                    last_connector_cups = [k for k, v in last_connector.cups.items() if not v]
+                    last_connector_cups.remove(ConnectionConstants.connector_top_cup)
+
+                    gate_connectors.append(last_connector)
+
+                gate_instance.connect(last_connector, last_connector_cups[0])
                 gate_instance.compile(compile_stack)
                 data['wire'] = output_wire
 
                 if variable_type == 'output':
                     output_wire = data['wire']
-                    label = Label(variable_name)
+                    label = Label(variable_name, 90)
                     
                     output_wire.connect(label, ConnectionConstants.label_cup)
-                    label.compile(compile_stack)
+                    outputs.append(label)
+
+        last_connector = Connector()
+        last_connector.connect(gate_connectors[-1], ConnectionConstants.connector_top_cup)
+        last_connector.compile(compile_stack)
+
+        connectors = [Connector()]
+        connectors[0].connect(platform_stick4, ConnectionConstants.short_stick_cup)
+        height = max(len(inputs), len(outputs)) * 2
+        
+        for _ in range(height):
+            connector = Connector()
+            connector.connect(connectors[-1], ConnectionConstants.connector_top_cup)
+
+            connectors.append(connector)
+
+        for i, input_label in enumerate(inputs):
+            input_label.connect(connectors[i * 2], ConnectionConstants.connector_front_cup)
+
+        for i, output_label in enumerate(outputs):
+            output_label.connect(connectors[i * 2], ConnectionConstants.connector_back_cup)
+        
+
+        for connector in connectors:
+            connector.compile(compile_stack)
+        
+        for i, input_label in enumerate(inputs):
+            input_label.compile(compile_stack)
+
+        for i, output_label in enumerate(outputs):
+            output_label.compile(compile_stack)
 
         for variable_name, data in variables.items():
             if 'wire' in data and not data['wire'].__dict__.get('_compiled'):
