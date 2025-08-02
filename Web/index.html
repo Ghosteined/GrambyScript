@@ -1,304 +1,356 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grambyscript Editor</title>
-    
-    <!-- Prism.js library for robust syntax highlighting -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <meta charset="UTF-8">
+  <title>GrambyScript Editor</title>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1e1e1e;
+      font-family: sans-serif;
+    }
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;700&display=swap');
-        
-        :root {
-            --bg-color: #282c34;
-            --editor-bg: #21252b;
-            --text-color: #abb2bf;
-            --caret-color: #528bff;
-            --border-color: #4b5263;
-            --shadow-color: rgba(0, 0, 0, 0.5);
-            --green-color: #28a745;
-            --red-color: #dc3545;
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
-            /* Syntax Highlighting Colors */
-            --comment-color: #6a9955;
-            --keyword-io-color: #f92672;
-            --keyword-gate-color: #fd971f;
-            --variable-color: #ffffff;
-            --punctuation-color: #56b6c2;
-            
-            /* Autocomplete Colors */
-            --autocomplete-bg: #2c313a;
-            --autocomplete-hover: #3e4451;
-            --autocomplete-border: #4b5263;
-        }
+    #top-bar {
+      height: 35px;
+      background-color: #2d2d2d;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border-bottom: 1px solid #3c3c3c;
+      justify-content: space-between;
+    }
 
-        /* --- Prism.js Base Theme (Okaidia, modified) --- */
-        code[class*="language-"], pre[class*="language-"] {
-            color: #f8f8f2;
-            background: none;
-            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-            text-align: left;
-            white-space: pre;
-            word-spacing: normal;
-            word-break: normal;
-            word-wrap: normal;
-            line-height: 1.8;
-            font-size: 16px;
-            -moz-tab-size: 4; -o-tab-size: 4; tab-size: 4;
-            -webkit-hyphens: none; -moz-hyphens: none; -ms-hyphens: none; hyphens: none;
-        }
+    #run-button {
+      background-color: #0e639c;
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      font-size: 13px;
+      height: 26px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-        /* --- Custom Color Overrides for Grambyscript --- */
-        .token.comment { color: var(--comment-color); font-style: italic; }
-        .token.keyword-io { color: var(--keyword-io-color); font-weight: bold; }
-        .token.keyword-gate { color: var(--keyword-gate-color); }
-        .token.variable { color: var(--variable-color); }
-        .token.punctuation, .token.operator { color: var(--punctuation-color); }
+    #run-button:hover {
+      background-color: #1177bb;
+    }
 
-        /* --- General Page Styles --- */
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        header { text-align: center; margin-bottom: 2rem; }
-        h1 { font-family: 'Inter', sans-serif; font-weight: 700; color: #fff; margin: 0; }
-        h1 .hash { color: var(--keyword-gate-color); }
-        header p { margin-top: 0.5rem; max-width: 60ch; line-height: 1.6; }
+    #font-size-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-        /* --- Editor Wrapper & Layers --- */
-        .editor-wrapper {
-            position: relative;
-            width: 90%;
-            max-width: 900px;
-            height: 55vh;
-            min-height: 350px;
-            background-color: var(--editor-bg);
-            border-radius: 8px;
-            box-shadow: 0 10px 30px var(--shadow-color);
-            border: 1px solid var(--border-color);
-        }
-        #editor-input, #highlighter {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            padding: 20px; margin: 0;
-            overflow: auto;
-            border-radius: 8px;
-        }
-        #editor-input {
-            z-index: 2;
-            color: transparent;
-            background: transparent;
-            caret-color: var(--caret-color);
-            outline: none; border: none; resize: none;
-            white-space: pre;
-            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-            font-size: 16px;
-            line-height: 1.8;
-        }
-        #highlighter { z-index: 1; pointer-events: none; }
+    #font-size-controls button {
+      background-color: #3c3c3c;
+      border: 1px solid #555;
+      color: white;
+      width: 26px;
+      height: 26px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        /* --- Autocomplete Box --- */
-        #autocomplete-box {
-            position: fixed; display: none; z-index: 10;
-            background-color: var(--autocomplete-bg);
-            border: 1px solid var(--autocomplete-border);
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            list-style: none; padding: 5px 0; margin: 0;
-            max-height: 200px; overflow-y: auto;
-            font-family: 'Fira Code', monospace; font-size: 14px;
-        }
-        #autocomplete-box li { padding: 6px 12px; cursor: pointer; color: var(--text-color); }
-        #autocomplete-box li:hover, #autocomplete-box li.active { background-color: var(--autocomplete-hover); color: #fff; }
+    #font-size-controls button:hover {
+      background-color: #4f4f4f;
+    }
 
-        /* --- Generation Controls & Output --- */
-        .generation-container {
-            width: 90%;
-            max-width: 900px;
-            margin-top: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #generate-button {
-            background-color: var(--green-color);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 28px;
-            font-size: 18px;
-            font-weight: bold;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            margin-bottom: 1rem;
-        }
-        #generate-button:hover { background-color: #218838; }
-        #generate-button:active { transform: scale(0.98); }
-        #generate-button:disabled { background-color: #5a6268; cursor: not-allowed; }
-        
-        .output-wrapper { position: relative; width: 100%; }
-        
-        #output-area {
-            width: 100%;
-            padding: 1rem;
-            padding-right: 70px; /* Make space for the copy button */
-            background-color: var(--editor-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-family: 'Fira Code', monospace;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            min-height: 50px;
-        }
-        #output-area.success { color: white; font-weight: bold; }
-        #output-area.error { color: var(--red-color); font-weight: bold; }
-        
-        #copy-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background-color: #4b5263;
-            color: white;
-            border: 1px solid #6c757d;
-            border-radius: 4px;
-            padding: 4px 10px;
-            font-size: 12px;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #copy-button.hidden { display: none; }
-        #copy-button:hover { background-color: #6c757d; }
-    </style>
+    #editor-container {
+      position: relative;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    #container {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+    }
+
+    #modal-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 5;
+    }
+
+    #output-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #252526;
+      border: 1px solid #3c3c3c;
+      padding: 16px 20px;
+      border-radius: 6px;
+      max-width: 60%;
+      min-width: 400px;
+      min-height: 100px;
+      z-index: 10;
+      color: #cccccc;
+      font-family: monospace;
+      font-size: 14px;
+      display: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.7);
+    }
+
+    #output-box h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #ffffff;
+      border-bottom: 1px solid #444;
+      padding-bottom: 4px;
+    }
+
+    #output-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #output-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      flex-grow: 1;
+    }
+
+    #copy-icon {
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 10px;
+      color: #cccccc;
+    }
+
+    #copy-icon:hover {
+      color: white;
+    }
+
+    #close-button {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 16px;
+      color: #888;
+      cursor: pointer;
+    }
+
+    #close-button:hover {
+      color: white;
+    }
+  </style>
 </head>
 <body>
-
-    <header>
-        <h1><span class="hash">#</span> Grambyscript Editor</h1>
-        <p>A simple, pretty editor for the Grambyscript logic language, complete with syntax highlighting and autocompletion for variables and keywords.</p>
-    </header>
-
-    <div class="editor-wrapper">
-        <pre id="highlighter" class="language-gramby"><code class="language-gramby"></code></pre>
-        <textarea id="editor-input" class="language-gramby" spellcheck="false" autocomplete="off"></textarea>
-        <ul id="autocomplete-box"></ul>
+  <div id="app">
+    <div id="top-bar">
+      <button id="run-button">Run</button>
+      <div id="font-size-controls">
+        <button id="font-decrease" title="Decrease font size">-</button>
+        <button id="font-increase" title="Increase font size">+</button>
+      </div>
     </div>
+    <div id="editor-container">
+      <div id="container"></div>
 
-    <div class="generation-container">
-        <button id="generate-button">Generate</button>
-        <div class="output-wrapper">
-            <pre id="output-area"></pre>
-            <button id="copy-button" class="hidden">Copy</button>
+      <div id="modal-overlay"></div>
+
+      <div id="output-box">
+        <div id="close-button" title="Close">✖</div>
+        <h3>Output</h3>
+        <div id="output-content">
+          <span id="output-text">Hello world !</span>
+          <span id="copy-icon" title="Copy to clipboard">📋</span>
         </div>
+      </div>
     </div>
+  </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Element Selectors ---
-        const editorInput = document.getElementById('editor-input'), 
-              highlighter = document.getElementById('highlighter'), 
-              codeElement = highlighter.querySelector('code'),
-              autocompleteBox = document.getElementById('autocomplete-box'), 
-              generateButton = document.getElementById('generate-button'),
-              outputArea = document.getElementById('output-area'), 
-              copyButton = document.getElementById('copy-button');
+  <script type="module">
+    import { Parser, CompileStack } from './compiler.js';
 
-        // --- Define the Grambyscript language for Prism.js ---
-        Prism.languages.gramby = {
-            'comment': { pattern: /\/.*?\/|\/\//, greedy: true },
-            'keyword-io': { pattern: /\b(input|output)\b/i, alias: 'keyword' },
-            'keyword-gate': { pattern: /\b(and|or|nand|nor|xor|xnor|not)\b/i, alias: 'keyword' },
-            'variable': { pattern: /\b[A-Z][A-Z0-9_]*\b/ },
-            'operator': /[=]/,
-            'punctuation': /[();]/
-        };
-        const allKeywords = ['input', 'output', 'and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not'];
-        const initialCode = `/ Basic XOR logic example /\ninput A;\ninput B;\noutput RESULT = A xor B;`;
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      monaco.languages.register({ id: 'grambyscript' });
 
-        // --- Core Editor & Autocomplete Functions ---
-        const updateEditor = () => { codeElement.innerHTML = Prism.highlight(editorInput.value, Prism.languages.gramby, 'gramby'); handleAutocomplete(); };
-        const syncScroll = () => { highlighter.scrollTop = editorInput.scrollTop; highlighter.scrollLeft = editorInput.scrollLeft; };
-        let activeSuggestionIndex = -1;
-        const getDefinedVariables = (t) => { const v = new Set(); let m; while ((m = /\b(?:input|output)?\s*([A-Z][A-Z0-9_]*)/g.exec(t)) !== null) {v.add(m[1]);} return Array.from(v); };
-        const getCurrentWord = (t, c) => (t.substring(0, c).match(/[\w_]+$/) || [''])[0];
-        const hideAutocomplete = () => { autocompleteBox.style.display = 'none'; };
-        const showAutocomplete = (sugs) => { if (!sugs.length) { hideAutocomplete(); return; } autocompleteBox.innerHTML = ''; sugs.forEach(s => { const li = document.createElement('li'); li.textContent = s; li.addEventListener('mousedown', e => { e.preventDefault(); applySuggestion(s); }); autocompleteBox.appendChild(li); }); const { top, left } = getCaretCoordinates(); autocompleteBox.style.top = `${top}px`; autocompleteBox.style.left = `${left}px`; autocompleteBox.style.display = 'block'; activeSuggestionIndex = -1; };
-        const handleAutocomplete = () => { const t = editorInput.value, c = editorInput.selectionStart, w = getCurrentWord(t, c); if (w.length < 1) { hideAutocomplete(); return; } const p = [...allKeywords, ...getDefinedVariables(t)]; const f = [...new Set(p.filter(i => i.toLowerCase().startsWith(w.toLowerCase()) && i.toLowerCase() !== w.toLowerCase()))]; showAutocomplete(f); };
-        const applySuggestion = (s) => { const t = editorInput.value, c = editorInput.selectionStart; const m = t.substring(0, c).match(/[\w_]+$/); if (m) { const start = m.index; editorInput.value = t.substring(0, start) + s + t.substring(c); const newCaret = start + s.length; editorInput.focus(); editorInput.setSelectionRange(newCaret, newCaret); updateEditor(); } hideAutocomplete(); };
-        const handleKeydown = (e) => { if (autocompleteBox.style.display === 'block') { const items = autocompleteBox.querySelectorAll('li'); if (!items.length) return; if (e.key === 'ArrowDown') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length; }  else if (e.key === 'ArrowUp') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length; }  else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (activeSuggestionIndex > -1) applySuggestion(items[activeSuggestionIndex].textContent); else if (items.length > 0) applySuggestion(items[0].textContent); return; }  else if (e.key === 'Escape') { hideAutocomplete(); return; } items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex)); } };
-        function getCaretCoordinates() { const p = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth']; const m = document.createElement('div'); const s = m.style; const c = window.getComputedStyle(editorInput); s.position = 'absolute'; s.left = '-9999px'; s.top = '0'; s.whiteSpace = 'pre-wrap'; p.forEach(prop => { s[prop] = c[prop]; }); document.body.appendChild(m); m.textContent = editorInput.value.substring(0, editorInput.selectionStart); const span = document.createElement('span'); span.textContent = '\u200b'; m.appendChild(span); const r = editorInput.getBoundingClientRect(); const top = r.top + span.offsetTop + parseInt(c.borderTopWidth) - editorInput.scrollTop + span.offsetHeight; const left = r.left + span.offsetLeft + parseInt(c.borderLeftWidth) - editorInput.scrollLeft; document.body.removeChild(m); return { top, left }; }
+      monaco.languages.setMonarchTokensProvider('grambyscript', {
+        tokenizer: {
+          root: [
+            [/\binput\b|\boutput\b/, 'keyword'],
+            [/\band\b|\bor\b|\bnand\b|\bnor\b|\bxor\b|\bxnor\b|\bnot\b/, 'gate'],
+            [/\/[^/]*\//, 'comment'],
+            [/[A-Z_][A-Z0-9_]*/, 'variable'],
+            [/=|;/, 'delimiter'],
+          ]
+        }
+      });
 
-        // --- API & Clipboard Logic ---
-        const handleGenerateClick = async () => {
-            const code = editorInput.value.trim();
-            if (!code) { outputArea.textContent = 'Editor is empty. Write some code first!'; outputArea.className = 'error'; return; }
-            generateButton.disabled = true; generateButton.textContent = 'Generating...';
-            outputArea.textContent = ''; outputArea.className = ''; copyButton.classList.add('hidden');
-            
-            const originalUrl = `http://wintr.wisp.uno:12974/generate?code=${encodeURIComponent(code)}`;
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(originalUrl)}`;
-            
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error(`Proxy error: Server responded with status ${response.status}`);
-                const data = await response.json();
-                const resultText = data.contents;
-                
-                if (data.status.http_code === 200) {
-                    outputArea.textContent = resultText;
-                    outputArea.className = 'success';
-                    copyButton.classList.remove('hidden'); // Show copy button on success
-                } else {
-                    outputArea.textContent = resultText || `Error: Your server responded with status ${data.status.http_code}`;
-                    outputArea.className = 'error';
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                outputArea.textContent = 'Network Error: Could not connect to the proxy or the generation server.';
-                outputArea.className = 'error';
-            } finally {
-                generateButton.disabled = false; generateButton.textContent = 'Generate';
+      monaco.languages.registerCompletionItemProvider('grambyscript', {
+        provideCompletionItems: function(model, position) {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+          
+          let suggestions = [
+            {
+              label: 'input',
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: 'input ${1:VAR_NAME};',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Declare an input variable.',
+              range: range,
+            },
+            {
+              label: 'output',
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: 'output ${1:VAR_NAME} = ${2:VALUE};',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Declare an output variable.',
+              range: range,
+            },
+            ...['and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not'].map(gate => ({
+              label: gate,
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: gate.toUpperCase(),
+              documentation: `A ${gate.toUpperCase()} logic gate.`,
+              range: range,
+            })),
+          ];
+
+          const code = model.getValue();
+          const definedVariables = new Set();
+          const varRegex = /\b(?:input\s+([A-Z_][A-Z0-9_]*)|([A-Z_][A-Z0-9_]*)\s*=)/g;
+          let match;
+          while ((match = varRegex.exec(code)) !== null) {
+            const varName = match[1] || match[2];
+            if (varName) {
+              definedVariables.add(varName);
             }
-        };
+          }
 
-        const handleCopyClick = async () => {
-            const textToCopy = outputArea.textContent;
-            if (!textToCopy) return;
-            try {
-                await navigator.clipboard.writeText(textToCopy);
-                copyButton.textContent = 'Copied!';
-                setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                copyButton.textContent = 'Error!';
-                setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
-            }
-        };
+          definedVariables.forEach(varName => {
+            suggestions.push({
+              label: varName,
+              kind: monaco.languages.CompletionItemKind.Variable,
+              insertText: varName,
+              range: range,
+            });
+          });
 
-        // --- Event Listeners ---
-        editorInput.addEventListener('input', updateEditor);
-        editorInput.addEventListener('scroll', syncScroll);
-        editorInput.addEventListener('keydown', handleKeydown);
-        editorInput.addEventListener('click', handleAutocomplete);
-        editorInput.addEventListener('blur', () => setTimeout(hideAutocomplete, 150));
-        generateButton.addEventListener('click', handleGenerateClick);
-        copyButton.addEventListener('click', handleCopyClick);
+          return { suggestions: suggestions };
+        }
+      });
 
-        // --- Initial Load ---
-        editorInput.value = initialCode;
-        updateEditor();
+      monaco.editor.defineTheme('gramby-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: 'keyword', foreground: '569CD6' },
+          { token: 'gate', foreground: 'C586C0' },
+          { token: 'variable', foreground: '9CDCFE' },
+          { token: 'comment', foreground: '6A9955' },
+          { token: 'delimiter', foreground: 'D4D4D4' }
+        ],
+        colors: {}
+      });
+
+      // --- NEW: LOAD SAVED FONT SIZE ---
+      const FONT_SIZE_KEY = 'grambyEditorFontSize';
+      const DEFAULT_FONT_SIZE = 14;
+      // Get the saved size from localStorage, or use the default if nothing is saved
+      const initialFontSize = parseInt(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE;
+      // --- END LOAD FONT SIZE ---
+
+      const editor = monaco.editor.create(document.getElementById('container'), {
+        value: `/ Grambyscript example /\ninput A;\ninput B;\n\nRESULT = A and B;\noutput FINAL_OUT = RESULT;`,
+        language: 'grambyscript',
+        theme: 'gramby-dark',
+        minimap: { enabled: false },
+        fontSize: initialFontSize // Use the loaded font size here
+      });
+
+      const fontDecreaseButton = document.getElementById('font-decrease');
+      const fontIncreaseButton = document.getElementById('font-increase');
+      const MIN_FONT_SIZE = 8;
+      const MAX_FONT_SIZE = 40;
+
+      fontIncreaseButton.addEventListener('click', () => {
+        let currentSize = editor.getOption(monaco.editor.EditorOption.fontSize);
+        if (currentSize < MAX_FONT_SIZE) {
+          const newSize = currentSize + 1;
+          editor.updateOptions({ fontSize: newSize });
+          // --- NEW: SAVE FONT SIZE ---
+          localStorage.setItem(FONT_SIZE_KEY, newSize);
+        }
+      });
+
+      fontDecreaseButton.addEventListener('click', () => {
+        let currentSize = editor.getOption(monaco.editor.EditorOption.fontSize);
+        if (currentSize > MIN_FONT_SIZE) {
+          const newSize = currentSize - 1;
+          editor.updateOptions({ fontSize: newSize });
+          // --- NEW: SAVE FONT SIZE ---
+          localStorage.setItem(FONT_SIZE_KEY, newSize);
+        }
+      });
+
+      const runButton = document.getElementById('run-button');
+      const modalOverlay = document.getElementById('modal-overlay');
+      const outputBox = document.getElementById('output-box');
+      const copyIcon = document.getElementById('copy-icon');
+      const closeButton = document.getElementById('close-button');
+      const outputText = document.getElementById('output-text');
+
+      runButton.addEventListener('click', () => {
+        let code = editor.getValue();
+        code = code.replace(/\/.*?\//gs, '');
+        
+        let parser = new Parser();
+        let compileStack = new CompileStack();
+        parser.Variable = {};
+
+        parser.PreCompile(code);
+        parser.Compile(compileStack);
+
+        outputText.textContent = compileStack.terminate();
+        modalOverlay.style.display = 'block';
+        outputBox.style.display = 'block';
+      });
+
+      copyIcon.addEventListener('click', () => {
+        navigator.clipboard.writeText(outputText.textContent);
+        copyIcon.textContent = '✅';
+        setTimeout(() => copyIcon.textContent = '📋', 1000);
+      });
+
+      const closeOutput = () => {
+        modalOverlay.style.display = 'none';
+        outputBox.style.display = 'none';
+      }
+
+      closeButton.addEventListener('click', closeOutput);
+      modalOverlay.addEventListener('click', closeOutput);
     });
-    </script>
+  </script>
 </body>
 </html>
