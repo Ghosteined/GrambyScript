@@ -10,9 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
     <style>
-        /* --- Base Fonts --- */
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;700&display=swap');
-
+        
         :root {
             --bg-color: #282c34;
             --editor-bg: #21252b;
@@ -23,26 +22,36 @@
             --green-color: #28a745;
             --red-color: #dc3545;
 
-            /* --- Syntax Colors --- */
+            /* Syntax Highlighting Colors */
             --comment-color: #6a9955;
             --keyword-io-color: #f92672;
             --keyword-gate-color: #fd971f;
             --variable-color: #ffffff;
             --punctuation-color: #56b6c2;
             
+            /* Autocomplete Colors */
             --autocomplete-bg: #2c313a;
             --autocomplete-hover: #3e4451;
             --autocomplete-border: #4b5263;
         }
 
-        /* --- Base Theme (Prism Okaidia, modified) --- */
+        /* --- Prism.js Base Theme (Okaidia, modified) --- */
         code[class*="language-"], pre[class*="language-"] {
-            color: #f8f8f2; background: none; font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-            text-align: left; white-space: pre; word-spacing: normal; word-break: normal; word-wrap: normal; line-height: 1.8;
-            font-size: 16px; -moz-tab-size: 4; -o-tab-size: 4; tab-size: 4; -webkit-hyphens: none; -moz-hyphens: none; -ms-hyphens: none; hyphens: none;
+            color: #f8f8f2;
+            background: none;
+            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            text-align: left;
+            white-space: pre;
+            word-spacing: normal;
+            word-break: normal;
+            word-wrap: normal;
+            line-height: 1.8;
+            font-size: 16px;
+            -moz-tab-size: 4; -o-tab-size: 4; tab-size: 4;
+            -webkit-hyphens: none; -moz-hyphens: none; -ms-hyphens: none; hyphens: none;
         }
 
-        /* --- Custom Color Overrides --- */
+        /* --- Custom Color Overrides for Grambyscript --- */
         .token.comment { color: var(--comment-color); font-style: italic; }
         .token.keyword-io { color: var(--keyword-io-color); font-weight: bold; }
         .token.keyword-gate { color: var(--keyword-gate-color); }
@@ -52,38 +61,67 @@
         /* --- General Page Styles --- */
         * { box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 2rem;
-            display: flex; flex-direction: column; align-items: center;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         header { text-align: center; margin-bottom: 2rem; }
         h1 { font-family: 'Inter', sans-serif; font-weight: 700; color: #fff; margin: 0; }
         h1 .hash { color: var(--keyword-gate-color); }
         header p { margin-top: 0.5rem; max-width: 60ch; line-height: 1.6; }
 
-        /* --- Editor Wrapper and Layers --- */
+        /* --- Editor Wrapper & Layers --- */
         .editor-wrapper {
-            position: relative; width: 90%; max-width: 900px; height: 55vh; min-height: 350px;
-            background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color);
+            position: relative;
+            width: 90%;
+            max-width: 900px;
+            height: 55vh;
+            min-height: 350px;
+            background-color: var(--editor-bg);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            border: 1px solid var(--border-color);
         }
         #editor-input, #highlighter {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 20px; margin: 0; overflow: auto; border-radius: 8px;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            padding: 20px; margin: 0;
+            overflow: auto;
+            border-radius: 8px;
         }
         #editor-input {
-            z-index: 2; color: transparent; background: transparent; caret-color: var(--caret-color); outline: none; border: none; resize: none;
-            white-space: pre; font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; font-size: 16px; line-height: 1.8;
+            z-index: 2;
+            color: transparent;
+            background: transparent;
+            caret-color: var(--caret-color);
+            outline: none; border: none; resize: none;
+            white-space: pre;
+            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 16px;
+            line-height: 1.8;
         }
         #highlighter { z-index: 1; pointer-events: none; }
 
-        /* --- Autocomplete --- */
+        /* --- Autocomplete Box --- */
         #autocomplete-box {
-            position: fixed; display: none; z-index: 10; background-color: var(--autocomplete-bg); border: 1px solid var(--autocomplete-border);
-            border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); list-style: none; padding: 5px 0; margin: 0; max-height: 200px;
-            overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 14px;
+            position: fixed; display: none; z-index: 10;
+            background-color: var(--autocomplete-bg);
+            border: 1px solid var(--autocomplete-border);
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            list-style: none; padding: 5px 0; margin: 0;
+            max-height: 200px; overflow-y: auto;
+            font-family: 'Fira Code', monospace; font-size: 14px;
         }
         #autocomplete-box li { padding: 6px 12px; cursor: pointer; color: var(--text-color); }
         #autocomplete-box li:hover, #autocomplete-box li.active { background-color: var(--autocomplete-hover); color: #fff; }
-        
-        /* --- NEW: Generation Controls --- */
+
+        /* --- Generation Controls & Output --- */
         .generation-container {
             width: 90%;
             max-width: 900px;
@@ -91,18 +129,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        #copy-message {
-            color: var(--text-color);
-            font-size: 14px;
-            margin-bottom: 0.5rem;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out;
-        }
-        #copy-message.visible {
-            opacity: 1;
-            visibility: visible;
         }
         #generate-button {
             background-color: var(--green-color);
@@ -115,21 +141,18 @@
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: background-color 0.2s ease, transform 0.1s ease;
+            margin-bottom: 1rem;
         }
-        #generate-button:hover {
-            background-color: #218838; /* Darker green */
-        }
-        #generate-button:active {
-            transform: scale(0.98);
-        }
-        #generate-button:disabled {
-            background-color: #5a6268;
-            cursor: not-allowed;
-        }
+        #generate-button:hover { background-color: #218838; }
+        #generate-button:active { transform: scale(0.98); }
+        #generate-button:disabled { background-color: #5a6268; cursor: not-allowed; }
+        
+        .output-wrapper { position: relative; width: 100%; }
+        
         #output-area {
             width: 100%;
-            margin-top: 1rem;
             padding: 1rem;
+            padding-right: 70px; /* Make space for the copy button */
             background-color: var(--editor-bg);
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -140,6 +163,23 @@
         }
         #output-area.success { color: white; font-weight: bold; }
         #output-area.error { color: var(--red-color); font-weight: bold; }
+        
+        #copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #4b5263;
+            color: white;
+            border: 1px solid #6c757d;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #copy-button.hidden { display: none; }
+        #copy-button:hover { background-color: #6c757d; }
     </style>
 </head>
 <body>
@@ -155,160 +195,94 @@
         <ul id="autocomplete-box"></ul>
     </div>
 
-    <!-- NEW: Generation UI Elements -->
     <div class="generation-container">
-        <div id="copy-message">Text copied to clipboard!</div>
         <button id="generate-button">Generate</button>
-        <pre id="output-area"></pre>
+        <div class="output-wrapper">
+            <pre id="output-area"></pre>
+            <button id="copy-button" class="hidden">Copy</button>
+        </div>
     </div>
 
-        <script>
+    <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Existing Editor Elements ---
-        const editorInput = document.getElementById('editor-input');
-        const highlighter = document.getElementById('highlighter');
-        const codeElement = highlighter.querySelector('code');
-        const autocompleteBox = document.getElementById('autocomplete-box');
-        
-        // --- Generation Elements ---
-        const generateButton = document.getElementById('generate-button');
-        const outputArea = document.getElementById('output-area');
-        const copyMessage = document.getElementById('copy-message');
+        // --- Element Selectors ---
+        const editorInput = document.getElementById('editor-input'), 
+              highlighter = document.getElementById('highlighter'), 
+              codeElement = highlighter.querySelector('code'),
+              autocompleteBox = document.getElementById('autocomplete-box'), 
+              generateButton = document.getElementById('generate-button'),
+              outputArea = document.getElementById('output-area'), 
+              copyButton = document.getElementById('copy-button');
 
         // --- Define the Grambyscript language for Prism.js ---
         Prism.languages.gramby = {
-            'comment': { pattern: /\/.*?\/|\/\//, greedy: true }, 'keyword-io': { pattern: /\b(input|output)\b/i, alias: 'keyword' },
-            'keyword-gate': { pattern: /\b(and|or|nand|nor|xor|xnor|not)\b/i, alias: 'keyword' }, 'variable': { pattern: /\b[A-Z][A-Z0-9_]*\b/ },
-            'operator': /[=]/, 'punctuation': /[();]/
+            'comment': { pattern: /\/.*?\/|\/\//, greedy: true },
+            'keyword-io': { pattern: /\b(input|output)\b/i, alias: 'keyword' },
+            'keyword-gate': { pattern: /\b(and|or|nand|nor|xor|xnor|not)\b/i, alias: 'keyword' },
+            'variable': { pattern: /\b[A-Z][A-Z0-9_]*\b/ },
+            'operator': /[=]/,
+            'punctuation': /[();]/
         };
         const allKeywords = ['input', 'output', 'and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not'];
+        const initialCode = `/ Basic XOR logic example /\ninput A;\ninput B;\noutput RESULT = A xor B;`;
 
-        const initialCode = `/ Basic XOR logic example /
-input A;
-input B;
-output RESULT = A xor B;`;
-
-        const updateEditor = () => {
-            const text = editorInput.value;
-            codeElement.innerHTML = Prism.highlight(text, Prism.languages.gramby, 'gramby');
-            handleAutocomplete();
-        };
-
-        const syncScroll = () => {
-            highlighter.scrollTop = editorInput.scrollTop; highlighter.scrollLeft = editorInput.scrollLeft;
-        };
-
-        // --- Autocomplete Logic (Unchanged) ---
+        // --- Core Editor & Autocomplete Functions ---
+        const updateEditor = () => { codeElement.innerHTML = Prism.highlight(editorInput.value, Prism.languages.gramby, 'gramby'); handleAutocomplete(); };
+        const syncScroll = () => { highlighter.scrollTop = editorInput.scrollTop; highlighter.scrollLeft = editorInput.scrollLeft; };
         let activeSuggestionIndex = -1;
         const getDefinedVariables = (t) => { const v = new Set(); let m; while ((m = /\b(?:input|output)?\s*([A-Z][A-Z0-9_]*)/g.exec(t)) !== null) {v.add(m[1]);} return Array.from(v); };
         const getCurrentWord = (t, c) => (t.substring(0, c).match(/[\w_]+$/) || [''])[0];
         const hideAutocomplete = () => { autocompleteBox.style.display = 'none'; };
-        const showAutocomplete = (suggestions) => {
-            if (!suggestions.length) { hideAutocomplete(); return; }
-            autocompleteBox.innerHTML = '';
-            suggestions.forEach(s => { const li = document.createElement('li'); li.textContent = s; li.addEventListener('mousedown', e => { e.preventDefault(); applySuggestion(s); }); autocompleteBox.appendChild(li); });
-            const { top, left } = getCaretCoordinates();
-            autocompleteBox.style.top = `${top}px`; autocompleteBox.style.left = `${left}px`;
-            autocompleteBox.style.display = 'block'; activeSuggestionIndex = -1;
-        };
-        const handleAutocomplete = () => {
-            const t = editorInput.value, c = editorInput.selectionStart, w = getCurrentWord(t, c);
-            if (w.length < 1) { hideAutocomplete(); return; }
-            const p = [...allKeywords, ...getDefinedVariables(t)];
-            const f = [...new Set(p.filter(i => i.toLowerCase().startsWith(w.toLowerCase()) && i.toLowerCase() !== w.toLowerCase()))];
-            showAutocomplete(f);
-        };
-        const applySuggestion = (s) => {
-            const t = editorInput.value, c = editorInput.selectionStart;
-            const m = t.substring(0, c).match(/[\w_]+$/);
-            if (m) {
-                const start = m.index;
-                editorInput.value = t.substring(0, start) + s + t.substring(c);
-                const newCaret = start + s.length;
-                editorInput.focus(); editorInput.setSelectionRange(newCaret, newCaret); updateEditor();
-            }
-            hideAutocomplete();
-        };
-        const handleKeydown = (e) => {
-            if (autocompleteBox.style.display === 'block') {
-                const items = autocompleteBox.querySelectorAll('li'); if (!items.length) return;
-                if (e.key === 'ArrowDown') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length; } 
-                else if (e.key === 'ArrowUp') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length; } 
-                else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (activeSuggestionIndex > -1) applySuggestion(items[activeSuggestionIndex].textContent); else if (items.length > 0) applySuggestion(items[0].textContent); return; } 
-                else if (e.key === 'Escape') { hideAutocomplete(); return; }
-                items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex));
-            }
-        };
-        function getCaretCoordinates() {
-            const props = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth'];
-            const mirror = document.createElement('div'); const style = mirror.style; const computed = window.getComputedStyle(editorInput);
-            style.position = 'absolute'; style.left = '-9999px'; style.top = '0'; style.whiteSpace = 'pre-wrap';
-            props.forEach(p => { style[p] = computed[p]; }); document.body.appendChild(mirror);
-            mirror.textContent = editorInput.value.substring(0, editorInput.selectionStart);
-            const span = document.createElement('span'); span.textContent = '\u200b'; mirror.appendChild(span);
-            const rect = editorInput.getBoundingClientRect();
-            const top = rect.top + span.offsetTop + parseInt(computed.borderTopWidth) - editorInput.scrollTop + span.offsetHeight;
-            const left = rect.left + span.offsetLeft + parseInt(computed.borderLeftWidth) - editorInput.scrollLeft;
-            document.body.removeChild(mirror); return { top, left };
-        }
+        const showAutocomplete = (sugs) => { if (!sugs.length) { hideAutocomplete(); return; } autocompleteBox.innerHTML = ''; sugs.forEach(s => { const li = document.createElement('li'); li.textContent = s; li.addEventListener('mousedown', e => { e.preventDefault(); applySuggestion(s); }); autocompleteBox.appendChild(li); }); const { top, left } = getCaretCoordinates(); autocompleteBox.style.top = `${top}px`; autocompleteBox.style.left = `${left}px`; autocompleteBox.style.display = 'block'; activeSuggestionIndex = -1; };
+        const handleAutocomplete = () => { const t = editorInput.value, c = editorInput.selectionStart, w = getCurrentWord(t, c); if (w.length < 1) { hideAutocomplete(); return; } const p = [...allKeywords, ...getDefinedVariables(t)]; const f = [...new Set(p.filter(i => i.toLowerCase().startsWith(w.toLowerCase()) && i.toLowerCase() !== w.toLowerCase()))]; showAutocomplete(f); };
+        const applySuggestion = (s) => { const t = editorInput.value, c = editorInput.selectionStart; const m = t.substring(0, c).match(/[\w_]+$/); if (m) { const start = m.index; editorInput.value = t.substring(0, start) + s + t.substring(c); const newCaret = start + s.length; editorInput.focus(); editorInput.setSelectionRange(newCaret, newCaret); updateEditor(); } hideAutocomplete(); };
+        const handleKeydown = (e) => { if (autocompleteBox.style.display === 'block') { const items = autocompleteBox.querySelectorAll('li'); if (!items.length) return; if (e.key === 'ArrowDown') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length; }  else if (e.key === 'ArrowUp') { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length; }  else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (activeSuggestionIndex > -1) applySuggestion(items[activeSuggestionIndex].textContent); else if (items.length > 0) applySuggestion(items[0].textContent); return; }  else if (e.key === 'Escape') { hideAutocomplete(); return; } items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex)); } };
+        function getCaretCoordinates() { const p = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth']; const m = document.createElement('div'); const s = m.style; const c = window.getComputedStyle(editorInput); s.position = 'absolute'; s.left = '-9999px'; s.top = '0'; s.whiteSpace = 'pre-wrap'; p.forEach(prop => { s[prop] = c[prop]; }); document.body.appendChild(m); m.textContent = editorInput.value.substring(0, editorInput.selectionStart); const span = document.createElement('span'); span.textContent = '\u200b'; m.appendChild(span); const r = editorInput.getBoundingClientRect(); const top = r.top + span.offsetTop + parseInt(c.borderTopWidth) - editorInput.scrollTop + span.offsetHeight; const left = r.left + span.offsetLeft + parseInt(c.borderLeftWidth) - editorInput.scrollLeft; document.body.removeChild(m); return { top, left }; }
 
-        // --- UPDATED: API Call Logic using AllOrigins Proxy ---
+        // --- API & Clipboard Logic ---
         const handleGenerateClick = async () => {
             const code = editorInput.value.trim();
-            if (!code) {
-                outputArea.textContent = 'Editor is empty. Write some code first!';
-                outputArea.className = 'error';
-                return;
-            }
-
-            // Set loading state
-            generateButton.disabled = true;
-            generateButton.textContent = 'Generating...';
-            outputArea.textContent = '';
-            outputArea.className = '';
-            copyMessage.classList.remove('visible');
+            if (!code) { outputArea.textContent = 'Editor is empty. Write some code first!'; outputArea.className = 'error'; return; }
+            generateButton.disabled = true; generateButton.textContent = 'Generating...';
+            outputArea.textContent = ''; outputArea.className = ''; copyButton.classList.add('hidden');
             
-            // 1. Your original insecure URL
             const originalUrl = `http://wintr.wisp.uno:12974/generate?code=${encodeURIComponent(code)}`;
-            
-            // 2. The new secure proxy URL
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(originalUrl)}`;
-
+            
             try {
-                // 3. Fetch from the secure proxy
                 const response = await fetch(proxyUrl);
-                
-                // 4. AllOrigins always returns 200 OK, we must parse the JSON to get the real status
-                if (!response.ok) {
-                    throw new Error(`Proxy error: Server responded with status ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`Proxy error: Server responded with status ${response.status}`);
                 const data = await response.json();
-                
-                // 'data.contents' holds the actual response from your server.
                 const resultText = data.contents;
-
-                // 'data.status.http_code' holds the *real* status code from your server.
+                
                 if (data.status.http_code === 200) {
                     outputArea.textContent = resultText;
                     outputArea.className = 'success';
-                    
-                    await navigator.clipboard.writeText(resultText);
-                    copyMessage.classList.add('visible');
-                    setTimeout(() => copyMessage.classList.remove('visible'), 3000);
-
+                    copyButton.classList.remove('hidden'); // Show copy button on success
                 } else {
-                    // This handles rate-limiting errors (429) or other errors from your Python server.
                     outputArea.textContent = resultText || `Error: Your server responded with status ${data.status.http_code}`;
                     outputArea.className = 'error';
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
-                outputArea.textContent = 'Network Error: Could not connect to the proxy or the generation server. Please try again.';
+                outputArea.textContent = 'Network Error: Could not connect to the proxy or the generation server.';
                 outputArea.className = 'error';
             } finally {
-                generateButton.disabled = false;
-                generateButton.textContent = 'Generate';
+                generateButton.disabled = false; generateButton.textContent = 'Generate';
+            }
+        };
+
+        const handleCopyClick = async () => {
+            const textToCopy = outputArea.textContent;
+            if (!textToCopy) return;
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                copyButton.textContent = 'Error!';
+                setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
             }
         };
 
@@ -319,6 +293,7 @@ output RESULT = A xor B;`;
         editorInput.addEventListener('click', handleAutocomplete);
         editorInput.addEventListener('blur', () => setTimeout(hideAutocomplete, 150));
         generateButton.addEventListener('click', handleGenerateClick);
+        copyButton.addEventListener('click', handleCopyClick);
 
         // --- Initial Load ---
         editorInput.value = initialCode;
