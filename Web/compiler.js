@@ -274,8 +274,8 @@ class Wire extends BaseItem {
 
 class Switch extends Wire {
     static Attachments = {
-        [ConnectionConstants.wire_ball_attachment1]: false,
-        [ConnectionConstants.wire_ball_attachment2]: false
+        [ConnectionConstants.wire_ball_attachment2]: false,
+        [ConnectionConstants.wire_ball_attachment1]: false
     };
     static Cups = {
         [ConnectionConstants.wire_cup2]: false,
