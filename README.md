@@ -12,6 +12,7 @@ You can try it out [Here](https://ghosteined.github.io/GrambyScript/Web/) !
 - Every statement must end with a semicolon (`;`).
 - Variable names must be **UPPERCASE** and contain only **letters**, **numbers**, and **underscores**.
 - Variable names **CANNOT** be overridden; attempting to do so will result in an error.
+- Outputs are just like variables, they cannot override a value and they need to be assigned a value.
 - Lines can be written consecutively without affecting execution — spacing is only for readability.
 - **Comments** are written between single slashes, like `/ this is a comment /`.
 - **Parentheses** are allowed in logic expressions to control evaluation order.
