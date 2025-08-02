@@ -274,13 +274,35 @@ class Wire extends BaseItem {
 
 class Switch extends Wire {
     static Attachments = {
-        [ConnectionConstants.wire_ball_attachment2]: false,
-        [ConnectionConstants.wire_ball_attachment1]: false
+        [ConnectionConstants.wire_ball_attachment1]: false,
+        [ConnectionConstants.wire_ball_attachment2]: false
     };
     static Cups = {
         [ConnectionConstants.wire_cup2]: false,
     };
     static Name = "Switch";
+
+    /**
+     * Overrides the default attachment selection order.
+     * For a Switch, the "base" is attachment 2, which should be used first.
+     * @returns {number} The ID of the first available attachment in the preferred order.
+     */
+    _getEmptyAttachment() {
+        // Preferred attachment order: attachment 2 (ID 3), then attachment 1 (ID 1).
+        const preferredOrder = [
+            ConnectionConstants.wire_ball_attachment2,
+            ConnectionConstants.wire_ball_attachment1
+        ];
+
+        for (const attachmentId of preferredOrder) {
+            // Check if this attachment is available in the instance's attachments map.
+            if (this.attachments[attachmentId] === false) {
+                return attachmentId;
+            }
+        }
+
+        return -1; // No empty attachment found
+    }
 }
 
 
