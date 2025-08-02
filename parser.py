@@ -56,6 +56,7 @@ class Parser:
 
     def _parse_statements(self, code: str):
         code = re.sub(r'/.*?/', '', code)
+        
         segments = code.split(';')
         result = []
 
@@ -77,7 +78,7 @@ class Parser:
             token = tokens.pop(0)
 
             if token == '(':
-                expr = parse_or(tokens)
+                expr = parse_or_nor_xor_xnor(tokens)
                 if not tokens or tokens.pop(0) != ')':
                     raise Exception("Expected ')'")
                 return expr
@@ -91,26 +92,67 @@ class Parser:
             else:
                 raise Exception(f"Unexpected token '{token}'")
 
-        def parse_and(tokens):
+        # Precedence level 2: and, nand
+        def parse_and_nand(tokens):
             left = parse_primary(tokens)
-            while tokens and tokens[0] == 'and':
-                tokens.pop(0)
+            while tokens and tokens[0] in ('and', 'nand'):
+                op = tokens.pop(0)
                 right = parse_primary(tokens)
-                left = [left, 'and', right]
+                left = [left, op, right]
             return left
 
-        def parse_or(tokens):
-            left = parse_and(tokens)
-            while tokens and tokens[0] == 'or':
-                tokens.pop(0)
-                right = parse_and(tokens)
-                left = [left, 'or', right]
+        # Precedence level 3: or, nor, xor, xnor
+        def parse_or_nor_xor_xnor(tokens):
+            left = parse_and_nand(tokens)
+            while tokens and tokens[0] in ('or', 'nor', 'xor', 'xnor'):
+                op = tokens.pop(0)
+                right = parse_and_nand(tokens)
+                left = [left, op, right]
             return left
 
-        return parse_or(tokens)
+        return parse_or_nor_xor_xnor(tokens)
+
+    def _transform_complex_gates(self, expr_tree):
+        if isinstance(expr_tree, str):
+            return expr_tree # Base case: an identifier
+
+        # Recursively transform operands first
+        if len(expr_tree) == 2 and expr_tree[0] == 'not':
+            operand = self._transform_complex_gates(expr_tree[1])
+            return ['not', operand]
+
+        if len(expr_tree) == 3:
+            left = self._transform_complex_gates(expr_tree[0])
+            op = expr_tree[1]
+            right = self._transform_complex_gates(expr_tree[2])
+
+            if op == 'nand':
+                # A nand B -> not (A and B)
+                return ['not', [left, 'and', right]]
+            elif op == 'nor':
+                # A nor B -> not (A or B)
+                return ['not', [left, 'or', right]]
+            elif op == 'xor':
+                # A xor B -> (A and (not B)) or ((not A) and B)
+                not_b = ['not', right]
+                a_and_not_b = [left, 'and', not_b]
+                not_a = ['not', left]
+                not_a_and_b = [not_a, 'and', right]
+                return [a_and_not_b, 'or', not_a_and_b]
+            elif op == 'xnor':
+                # A xnor B -> (A and B) or ((not A) and (not B))
+                a_and_b = [left, 'and', right]
+                not_a = ['not', left]
+                not_b = ['not', right]
+                not_a_and_not_b = [not_a, 'and', not_b]
+                return [a_and_b, 'or', not_a_and_not_b]
+            else: # and, or are fundamental gates
+                return [left, op, right]
+
+        return expr_tree
 
     def _flatten_expr(self, expr):
-        # expr is a nested list/tree
+        # expr is a nested list/tree of fundamental gates
         temp_vars = []
         def flatten(e):
             if isinstance(e, str):
@@ -135,7 +177,7 @@ class Parser:
                 # Unwrap single-element lists
                 elif len(e) == 1:
                     return flatten(e[0])
-            raise Exception("Invalid expression structure")
+            raise Exception("Invalid expression structure for flattening")
         final_var = flatten(expr)
         return final_var, temp_vars
 
@@ -146,7 +188,7 @@ class Parser:
             raise Exception("Variable name is already used")
 
         if line[1] != '=':
-            raise Exception("Variable names must contain only uppercase letters, digits, and underscores")
+            raise Exception("Variable definition must start with '='")
 
         expression = []
         for i, item in enumerate(line):
@@ -156,10 +198,15 @@ class Parser:
                 raise Exception("Unknown token '" + item + "'")
             expression.append(item)
 
-        expr_tree = self._parse_expression(expression.copy())
+        # Step 1: Parse the raw expression into a tree
+        expr_tree_raw = self._parse_expression(expression.copy())
 
-        # Always flatten, even if simple
-        final_var, temp_vars = self._flatten_expr(expr_tree)
+        # Step 2: Transform complex gates into fundamental ones
+        expr_tree_fundamental = self._transform_complex_gates(expr_tree_raw)
+
+        # Step 3: Flatten the fundamental tree into temporary variables
+        final_var, temp_vars = self._flatten_expr(expr_tree_fundamental)
+        
         for temp_name, temp_expr in temp_vars:
             self._variables[temp_name] = {
                 'type': 'temp',
@@ -189,7 +236,6 @@ class Parser:
         for line in parsed:
             definer = line[0]
             
-
             if definer == 'input':
                 if not len(line) == 2:
                     raise Exception("Input must be exactly one value")
@@ -213,11 +259,11 @@ class Parser:
 
             raise Exception("Unknown token '" + definer + "'")
     
-
         return variables
     
     def Compile(self, compile_stack: CompileStack):
         variables = self._variables
+        print(variables)
 
         for variable_name, data in variables.items():
             variable_type = data['type']
