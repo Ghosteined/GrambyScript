@@ -194,6 +194,32 @@ class Connector extends BaseItem {
         [ConnectionConstants.connector_side_cup2]: false
     };
     static Name = "Connector";
+
+    constructor(rotationZ = 0) {
+        super();
+        this._rotationZ = rotationZ;
+    }
+
+    compile(stack) {
+        if (this._compiled) return;
+        this._compiled = true;
+
+        for (const position of this._positions) {
+            let element = position[2];
+            if (typeof element === 'number') continue;
+            if (element._id === -1) {
+                throw new Error(`Uncompiled part connection: ${this.constructor.Name} depends on an uncompiled ${element.constructor.Name}.`);
+            }
+            position[2] = element._id;
+        }
+
+        const datas = {};
+        if (this._rotationZ !== 0) {
+            datas["OrientationZ"] = this._rotationZ;
+        }
+        const item = [this.constructor.Name, this._positions, datas];
+        this._id = stack.append(item, this);
+    }
 }
 
 class ShortStick extends BaseItem {
@@ -672,7 +698,7 @@ class Parser {
                 inputs.push(label);
             } else if (['variable', 'temp', 'output'].includes(data.type)) {
                 const gate_info = Array.isArray(data.value) ? this._check_dict_matches(states, data.value) : null;
-                
+
                 if (gate_info === null) { // Direct assignment: C = A
                     data.wire = this._variables[data.value]?.wire;
                     if (!data.wire) throw new Error(`Wire for variable ${data.value} not found when defining ${variable_name}`);
@@ -694,18 +720,22 @@ class Parser {
                         data.wire.connect(gate_instance, ConnectionConstants.tri_gate_output);
                     }
 
+                    // --- Connector stacking logic (180° rotation) ---
                     let last_connector = gate_connectors[gate_connectors.length - 1];
-                    let free_cups = Object.keys(last_connector.cups).filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
-                    
+                    let free_cups = Object.keys(last_connector.cups)
+                        .filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
+
                     if (free_cups.length === 0) {
-                        const new_connector = new Connector();
+                        // Create a new connector with 180° rotation
+                        const new_connector = new Connector(180); // Pass rotationZ as argument
                         new_connector.connect(last_connector, ConnectionConstants.connector_top_cup);
                         new_connector.compile(compile_stack);
                         last_connector = new_connector;
                         gate_connectors.push(last_connector);
-                        free_cups = Object.keys(last_connector.cups).filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
+                        free_cups = Object.keys(last_connector.cups)
+                            .filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
                     }
-                    
+
                     gate_instance.connect(last_connector, parseInt(free_cups[0], 10));
                     gate_instance.compile(compile_stack);
                 }

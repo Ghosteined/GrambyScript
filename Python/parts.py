@@ -62,6 +62,7 @@ class BaseItem:
         self.attachments = self.Attachments.copy()
         self.cups = self.Cups.copy()
         self._positions = []
+        self._datas = {}
 
     def _getEmptyAttachment(self):
         foundId = -1
@@ -103,7 +104,7 @@ class BaseItem:
             position[2] = position[2]._id
         
         item.append(self._positions)
-        item.append([])
+        item.append(self._datas)
 
         id = stack.append(item, self)
         self._id = id
@@ -155,6 +156,13 @@ class Connector(BaseItem):
     }
     Name = "Connector"
 
+    def __init__(self, rotationZ: int = 0):
+        super().__init__()
+
+        self._datas = {}
+        if rotationZ != 0:
+            self._datas["OrientationZ"] = rotationZ
+
 class ShortStick(BaseItem):
     Attachments = {
         ConnectionConstants.short_stick_attachment: False
@@ -202,32 +210,10 @@ class Label(BaseItem):
 
     def __init__(self, text: str, rotationY: int = 0):
         super().__init__()
-        self._str = text
-        self._rotationY = rotationY
 
-    def compile(self, stack: CompileStack):
-        item = [self.Name]
-        self._compiled = True
-
-        for position in self._positions:
-            if isinstance(position[2], int):
-                continue
-            
-            if position[2]._id == -1:
-                raise Exception("All connections are not compiled !")
-            
-            position[2] = position[2]._id
-        
-        item.append(self._positions)
-
-        datas = {"ActivationKey":self._str}
-
-        if self._rotationY != 0:
-            datas["OrientationY"] = self._rotationY
-        item.append(datas)
-
-        id = stack.append(item, self)
-        self._id = id
+        self._datas = {"ActivationKey": text}
+        if rotationY != 0:
+            self._datas["OrientationY"] = rotationY
 
 # Wire types
 class Wire(BaseItem):

@@ -404,7 +404,7 @@ class Parser:
                 last_connector_cups.remove(ConnectionConstants.connector_top_cup)
 
                 if len(last_connector_cups) == 0:
-                    last_connector = Connector()
+                    last_connector = Connector(rotationZ=180)
                     last_connector.connect(gate_connectors[-1], ConnectionConstants.connector_top_cup)
                     last_connector.compile(compile_stack)
 
