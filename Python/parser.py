@@ -14,6 +14,8 @@ expression_keywords = [
     'xor',
     'xnor',
     
+    '=',
+
     '(',
     ')'
 ]
@@ -40,6 +42,8 @@ states = {
 class Parser:
     def __init__(self):
         self._variables = {}
+        self._replacements = {}
+
         self._temp_counter = 0
 
     def _check_dict_matches(self, d: dict, strings: list[str]):
@@ -151,6 +155,11 @@ class Parser:
                 return [left, op, right]
 
         return expr_tree
+    
+    def _getTemporaryVariableName(self):
+        temp_name = f"_TMP{self._temp_counter}"
+        self._temp_counter += 1
+        return temp_name
 
     def _flatten_expr(self, expr):
         # expr is a nested list/tree of fundamental gates
@@ -162,8 +171,8 @@ class Parser:
                 # Flatten nested 'not'
                 if len(e) == 2 and e[0] == 'not':
                     operand = flatten(e[1])
-                    temp_name = f"_TMP{self._temp_counter}"
-                    self._temp_counter += 1
+
+                    temp_name = self._getTemporaryVariableName()
                     temp_vars.append((temp_name, ['not', operand]))
                     return temp_name
                 # Flatten nested binary gates
@@ -171,8 +180,8 @@ class Parser:
                     left = flatten(e[0])
                     op = e[1]
                     right = flatten(e[2])
-                    temp_name = f"_TMP{self._temp_counter}"
-                    self._temp_counter += 1
+
+                    temp_name = self._getTemporaryVariableName()
                     temp_vars.append((temp_name, [left, op, right]))
                     return temp_name
                 # Unwrap single-element lists
@@ -184,19 +193,38 @@ class Parser:
 
     def _parse_variable_line(self, line: list, type: str):
         definer = line[0]
+        actual_definer = definer
+        original_definer = definer
 
-        if self._variables.get(definer):
-            raise Exception("Variable name is already used")
+        if type == 'output' and len(line) == 1:
+            line.append('=')
+            line.append(line[0])
+
+        if self._replacements.get(definer):
+            actual_definer = self._replacements[definer] 
+
+        if self._variables.get(definer) or self._replacements.get(definer):
+            temp_name = self._getTemporaryVariableName()
+
+            self._replacements[definer] = temp_name
+            definer = temp_name
 
         if line[1] != '=':
             raise Exception("Variable definition must start with '='")
 
         expression = []
-        for i, item in enumerate(line):
-            if i < 2:
-                continue
+        print(line)
+        for i, item in enumerate(line[2:]):
             if item not in expression_keywords and not self._is_valid_identifier(item):
                 raise Exception("Unknown token '" + item + "'")
+            
+            if item in self._replacements and item != original_definer:
+                item = self._replacements[item]
+            elif  item in self._replacements and item == original_definer:
+                item = actual_definer
+
+            print(item)
+
             expression.append(item)
 
         # Step 1: Parse the raw expression into a tree
