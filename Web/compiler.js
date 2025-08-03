@@ -417,6 +417,7 @@ const states = {
 class Parser {
     constructor() {
         this._variables = {};
+        this._replacements = {}; // Track variable overrides
         this._temp_counter = 0;
     }
 
@@ -552,22 +553,52 @@ class Parser {
         return [final_var, temp_vars];
     }
     
+    _getTemporaryVariableName() {
+        return `_TMP${this._temp_counter++}`;
+    }
+
     _parse_variable_line(line, type) {
-        const definer = line[0];
-        if (this._variables[definer]) throw new Error(`Variable name '${definer}' is already used`);
+        let definer = line[0];
+        let actual_definer = definer;
+        let original_definer = definer;
+
+        // Output without definition: output X -> output X = X
+        if (type === 'output' && line.length === 1) {
+            line.push('=');
+            line.push(line[0]);
+        }
+
+        if (this._replacements[definer]) {
+            actual_definer = this._replacements[definer];
+        }
+
+        if (this._variables[definer] || this._replacements[definer]) {
+            // Variable override: create temp variable and update mapping
+            const temp_name = this._getTemporaryVariableName();
+            this._replacements[definer] = temp_name;
+            definer = temp_name;
+        }
+
         if (line[1] !== '=') throw new Error(`Variable definition for '${definer}' must start with '='`);
 
-        const expression = line.slice(2);
-        for(const item of expression) {
+        const expression = [];
+        for (let i = 2; i < line.length; i++) {
+            let item = line[i];
             if (!expression_keywords.includes(item) && !this._is_valid_identifier(item)) {
                 throw new Error(`Unknown token '${item}'`);
             }
+            if (this._replacements[item] && item !== original_definer) {
+                item = this._replacements[item];
+            } else if (this._replacements[item] && item === original_definer) {
+                item = actual_definer;
+            }
+            expression.push(item);
         }
 
         const expr_tree_raw = this._parse_expression([...expression]);
         const expr_tree_fundamental = this._transform_complex_gates(expr_tree_raw);
         const [final_var, temp_vars] = this._flatten_expr(expr_tree_fundamental);
-        
+
         for (const [temp_name, temp_expr] of temp_vars) {
             this._variables[temp_name] = { type: 'temp', value: temp_expr };
         }
@@ -575,25 +606,33 @@ class Parser {
     }
 
     PreCompile(code) {
+        this._variables = {};
+        this._replacements = {};
+        this._temp_counter = 0;
+
         const parsed = this._parse_statements(code);
 
         for (const line of parsed) {
-            const definer = line[0];
-            
+            let definer = line[0];
+
             if (definer === 'input') {
                 if (line.length !== 2) throw new Error("Input must be exactly one value");
                 const varName = line[1];
                 if (!this._is_valid_identifier(varName)) throw new Error("Variable names must contain only uppercase letters, digits, and underscores");
                 this._variables[varName] = { type: 'input', value: null };
             } else if (definer === 'output') {
-                this._parse_variable_line(line.slice(1), 'output');
+                // Output without definition support
+                // If output X; -> output X = X
+                // If output X = Y; -> output X = Y
+                const outputLine = line.slice(1);
+                this._parse_variable_line(outputLine, 'output');
             } else if (this._is_valid_identifier(definer)) {
                 this._parse_variable_line(line, 'variable');
             } else {
                 throw new Error(`Unknown token '${definer}' in line: ${line.join(' ')}`);
             }
         }
-    
+
         return this._variables;
     }
 

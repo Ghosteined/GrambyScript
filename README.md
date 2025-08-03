@@ -11,8 +11,9 @@ You can try it out [Here](https://ghosteined.github.io/GrambyScript/Web/) !
 
 - Every statement must end with a semicolon (`;`).
 - Variable names must be **UPPERCASE** and contain only **letters**, **numbers**, and **underscores**.
-- Variable names **CANNOT** be overridden; attempting to do so will result in an error.
-- Outputs are variables, they cannot override another variable name and they need to be assigned a value.
+- **Variable names can be overridden.** If a variable is redefined, its previous value is replaced and all further references use the new value.
+- Outputs are variables; they can be defined with or without an explicit assignment.  
+  - `output S0;` is equivalent to `output S0 = S0;`
 - Lines can be written consecutively without affecting execution — spacing is only for readability.
 - **Comments** are written between single slashes, like `/ this is a comment /`.
 - **Parentheses** are allowed in logic expressions to control evaluation order.
@@ -28,17 +29,32 @@ Declares a named input variable. It must not be assigned a value. The user sets 
 ```gramsby
 input SWITCH;
 input SENSOR_1;
-````
+```
 
 ### `output`
 
 Declares a named output variable. The expression on the right defines its logic value.
-Unlike to input, an output needs to be assigned a value.
+Outputs can be declared with or without an explicit assignment:
+
+```gramsby
+/ Output with assignment /
+output RESULT = A and B;
+
+/ Output without assignment /
+output RESULT
+```
+
+### Variable Override
+
+You can redefine a variable by assigning it a new value. All further references will use the new value.
 
 ```gramsby
 input A;
 input B;
-output RESULT = A and B;
+
+RESULT = A and B;
+RESULT = not RESULT;    // RESULT refers to the NOT of the previous RESULT
+output FINAL_OUT = RESULT;
 ```
 
 ### Logic Gates
@@ -104,7 +120,6 @@ output RESULT = TEMP1 or TEMP2;
 * No implicit declarations — every used variable must appear in an `input`, `output`, or assignment.
 * There are no other keywords or features beyond what's described.
 * Errors will occur if:
-
   * You forget a semicolon
   * Use an undefined variable
   * Use lowercase or invalid characters in variable names
