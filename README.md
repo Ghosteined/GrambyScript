@@ -17,6 +17,7 @@ You can try it out [Here](https://ghosteined.github.io/GrambyScript/Web/) !
 - Lines can be written consecutively without affecting execution — spacing is only for readability.
 - **Comments** are written between single slashes, like `/ this is a comment /`.
 - **Parentheses** are allowed in logic expressions to control evaluation order.
+- **Constants `0` and `1` are available** and can be used in logic expressions to represent false and true, respectively.
 
 ---
 
@@ -77,6 +78,20 @@ input C;
 
 TEMP = A and B;
 output RESULT = TEMP xor C;
+```
+
+---
+
+## Constants
+
+You can use the constants `0` and `1` in logic expressions.  
+- `0` represents false (off).
+- `1` represents true (on).
+
+```gramsby
+output ALWAYS_ON = 1;
+output ALWAYS_OFF = 0;
+output INVERTED = not 1; / This will always be 0 /
 ```
 
 ---
