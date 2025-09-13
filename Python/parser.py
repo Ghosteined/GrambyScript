@@ -1,7 +1,5 @@
-import math
 import re
-
-from parts import Label, StackableWire, StackableSwitch, GateAND, GateOR, GateNOT, Connector, Gyro, ShortStick
+from parts import Label, StackableWire, StackableSwitch, GateAND, GateOR, GateNOT, Connector, Gyro, ShortStick, StackableButton
 from parts import CompileStack, ConnectionConstants
 
 # Constants
@@ -43,7 +41,7 @@ class Parser:
     def __init__(self):
         self._variables = {}
         self._replacements = {}
-
+        self._init_variable_name = '_INIT'
         self._temp_counter = 0
 
     def _check_dict_matches(self, d: dict, strings: list[str]):
@@ -90,7 +88,9 @@ class Parser:
             
             elif token == 'not':
                 operand = parse_primary(tokens)
-                return ['not', operand]
+                # This is the change: transform 'not A' into 'not (_INIT or A)'
+                or_expression = [self._init_variable_name, 'or', operand]
+                return ['not', or_expression]
             
             elif self._is_valid_identifier(token):
                 return token
@@ -213,7 +213,7 @@ class Parser:
             raise Exception("Variable definition must start with '='")
 
         expression = []
-        print(line)
+        
         for i, item in enumerate(line[2:]):
             if item not in expression_keywords and not self._is_valid_identifier(item):
                 raise Exception("Unknown token '" + item + "'")
@@ -222,8 +222,6 @@ class Parser:
                 item = self._replacements[item]
             elif  item in self._replacements and item == original_definer:
                 item = actual_definer
-
-            print(item)
 
             expression.append(item)
 
@@ -247,6 +245,10 @@ class Parser:
         }
 
     def PreCompile(self, code: str):
+        self._variables[self._init_variable_name] = {
+            'type': 'input',
+            'value': None
+        }
         variables = self._variables
         parsed = self._parse_statements(code)
 
@@ -346,14 +348,19 @@ class Parser:
 
         inputs = []
         outputs = []
+        
         for variable_name, data in variables.items():
             variable_type = data['type']
             variable_value = data['value']
 
             if variable_type == 'input':
-                label = Label(variable_name, - 90)
+                label = Label(variable_name, -90)
 
-                wire = StackableSwitch()
+                if variable_name == self._init_variable_name:
+                    wire = StackableButton()
+                else:
+                    wire = StackableSwitch()
+                
                 wire.connect(label, ConnectionConstants.label_cup)
 
                 data['wire'] = wire

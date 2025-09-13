@@ -331,6 +331,31 @@ class Switch extends Wire {
     }
 }
 
+class Button extends Wire {
+    static Attachments = {
+        [ConnectionConstants.wire_ball_attachment1]: false,
+        [ConnectionConstants.wire_ball_attachment2]: false
+    };
+    static Cups = {
+        [ConnectionConstants.wire_cup2]: false,
+    };
+    static Name = "Button";
+
+    _getEmptyAttachment() {
+        const preferredOrder = [
+            ConnectionConstants.wire_ball_attachment2,
+            ConnectionConstants.wire_ball_attachment1
+        ];
+
+        for (const attachmentId of preferredOrder) {
+            if (this.attachments[attachmentId] === false) {
+                return attachmentId;
+            }
+        }
+        return -1;
+    }
+}
+
 
 /**
  * A base class for wires that can be chained together automatically.
@@ -419,6 +444,14 @@ class StackableSwitch extends StackableWireType {
     }
 }
 
+class StackableButton extends StackableWireType {
+    constructor() {
+        super();
+        // The base is a Button, subsequent links are Wires.
+        this._initialize(Wire, Button);
+    }
+}
+
 
 // ===================================================================================
 //
@@ -428,7 +461,7 @@ class StackableSwitch extends StackableWireType {
 
 const expression_keywords = [
     'and', 'or', 'not', 'nand', 'nor', 'xor', 'xnor',
-    '(', ')'
+    '=', '(', ')'
 ];
 
 const states = {
@@ -445,6 +478,7 @@ class Parser {
         this._variables = {};
         this._replacements = {}; // Track variable overrides
         this._temp_counter = 0;
+        this._init_variable_name = '_INIT';
     }
 
     _check_dict_matches(d, strings) {
@@ -505,7 +539,9 @@ class Parser {
                 return expr;
             } else if (token === 'not') {
                 const operand = parse_primary(tkns);
-                return ['not', operand];
+                // Transform 'not A' into 'not (_INIT or A)'
+                const or_expression = [this._init_variable_name, 'or', operand];
+                return ['not', or_expression];
             } else if (this._is_valid_identifier(token)) {
                 return token;
             } else {
@@ -636,6 +672,9 @@ class Parser {
         this._replacements = {};
         this._temp_counter = 0;
 
+        // Automatically add the _INIT input variable
+        this._variables[this._init_variable_name] = { type: 'input', value: null };
+
         const parsed = this._parse_statements(code);
 
         for (const line of parsed) {
@@ -647,9 +686,6 @@ class Parser {
                 if (!this._is_valid_identifier(varName)) throw new Error("Variable names must contain only uppercase letters, digits, and underscores");
                 this._variables[varName] = { type: 'input', value: null };
             } else if (definer === 'output') {
-                // Output without definition support
-                // If output X; -> output X = X
-                // If output X = Y; -> output X = Y
                 const outputLine = line.slice(1);
                 this._parse_variable_line(outputLine, 'output');
             } else if (this._is_valid_identifier(definer)) {
@@ -693,7 +729,12 @@ class Parser {
         for (const [variable_name, data] of Object.entries(this._variables)) {
             if (data.type === 'input') {
                 const label = new Label(variable_name, -90);
-                data.wire = new StackableSwitch();
+                // Use a StackableButton for the _INIT variable, otherwise use a StackableSwitch
+                if (variable_name === this._init_variable_name) {
+                    data.wire = new StackableButton();
+                } else {
+                    data.wire = new StackableSwitch();
+                }
                 data.wire.connect(label, ConnectionConstants.label_cup);
                 inputs.push(label);
             } else if (['variable', 'temp', 'output'].includes(data.type)) {
@@ -726,8 +767,7 @@ class Parser {
                         .filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
 
                     if (free_cups.length === 0) {
-                        // Create a new connector with 180° rotation
-                        const new_connector = new Connector(180); // Pass rotationZ as argument
+                        const new_connector = new Connector(180);
                         new_connector.connect(last_connector, ConnectionConstants.connector_top_cup);
                         new_connector.compile(compile_stack);
                         last_connector = new_connector;
@@ -791,6 +831,8 @@ export {
     Label,
     Wire,
     Switch,
+    Button,
     StackableWire,
     StackableSwitch,
+    StackableButton
 };

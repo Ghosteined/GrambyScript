@@ -237,6 +237,16 @@ class Switch(Wire):
     }
     Name = "Switch"
 
+class Button(Wire):
+    Attachments = {
+        ConnectionConstants.wire_ball_attachment2: False,
+        ConnectionConstants.wire_ball_attachment1: False
+    }
+    Cups = {
+        ConnectionConstants.wire_cup2: False,
+    }
+    Name = "Button"
+
 # Stackable wire types
 A = TypeVar('A', bound='Wire')
 B = TypeVar('B', bound='Wire')
@@ -303,5 +313,9 @@ class StackableWire(StackableWireType[Wire, Wire]):
         super().__init__()
 
 class StackableSwitch(StackableWireType[Wire, Switch]):
+    def __init__(self):
+        super().__init__()
+
+class StackableButton(StackableWireType[Wire, Button]):
     def __init__(self):
         super().__init__()
