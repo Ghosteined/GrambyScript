@@ -479,6 +479,7 @@ class Parser {
         this._replacements = {}; // Track variable overrides
         this._temp_counter = 0;
         this._init_variable_name = '_INIT';
+        this._steady_variable_name = '_STEADY';
     }
 
     _check_dict_matches(d, strings) {
@@ -666,6 +667,13 @@ class Parser {
         const expression = [];
         for (let i = 2; i < line.length; i++) {
             let item = line[i];
+
+            if (item === '0') {
+                item = this._init_variable_name;
+            } else if (item === '1') {
+                item = this._steady_variable_name;
+            }
+
             if (!expression_keywords.includes(item) && !this._is_valid_identifier(item)) {
                 throw new Error(`Unknown token '${item}'`);
             }
@@ -694,7 +702,11 @@ class Parser {
         this._replacements = {};
         this._temp_counter = 0;
 
+        // Base variable 0: The init button. High (1) for one tick, then low (0).
         this._variables[this._init_variable_name] = { type: 'input', value: null };
+        // Base variable 1: The steady-state signal. The inverse of the init signal.
+        // Low (0) for one tick, then high (1). Defined as NOT 0.
+        this._variables[this._steady_variable_name] = { type: 'variable', value: ['not', this._init_variable_name] };
 
         const parsed = this._parse_statements(code);
 
@@ -704,12 +716,22 @@ class Parser {
             if (definer === 'input') {
                 if (line.length !== 2) throw new Error("Input must be exactly one value");
                 const varName = line[1];
+                if (varName === '0' || varName === '1') {
+                    throw new Error("Cannot use '0' or '1' as an input variable name.");
+                }
                 if (!this._is_valid_identifier(varName)) throw new Error("Variable names must contain only uppercase letters, digits, and underscores");
                 this._variables[varName] = { type: 'input', value: null };
             } else if (definer === 'output') {
                 const outputLine = line.slice(1);
+                const outputName = outputLine[0];
+                 if (outputName === '0' || outputName === '1') {
+                    throw new Error("Cannot assign to '0' or '1'.");
+                }
                 this._parse_variable_line(outputLine, 'output');
             } else if (this._is_valid_identifier(definer)) {
+                if (definer === '0' || definer === '1') {
+                    throw new Error("Cannot assign to '0' or '1'.");
+                }
                 this._parse_variable_line(line, 'variable');
             } else {
                 throw new Error(`Unknown token '${definer}' in line: ${line.join(' ')}`);
