@@ -539,9 +539,7 @@ class Parser {
                 return expr;
             } else if (token === 'not') {
                 const operand = parse_primary(tkns);
-                // Transform 'not A' into 'not (_INIT or A)'
-                const or_expression = [this._init_variable_name, 'or', operand];
-                return ['not', or_expression];
+                return ['not', operand]; // FIX: Don't inject _INIT here.
             } else if (this._is_valid_identifier(token)) {
                 return token;
             } else {
@@ -566,16 +564,16 @@ class Parser {
             const right = this._transform_complex_gates(expr_tree[2]);
 
             switch (op) {
-                case 'nand': return ['not', [left, 'and', right]]; // A nand B -> not (A and B)
-                case 'nor':  return ['not', [left, 'or', right]]; // A nor B -> not (A or B)
-                case 'xor': { // A xor B -> (A and not B) or (not A and B)
+                case 'nand': return ['not', [left, 'and', right]];
+                case 'nor':  return ['not', [left, 'or', right]];
+                case 'xor': {
                     const not_b = ['not', right];
                     const a_and_not_b = [left, 'and', not_b];
                     const not_a = ['not', left];
                     const not_a_and_b = [not_a, 'and', right];
                     return [a_and_not_b, 'or', not_a_and_b];
                 }
-                case 'xnor': { // A xnor B -> (A and B) or (not A and not B)
+                case 'xnor': {
                     const a_and_b = [left, 'and', right];
                     const not_a = ['not', left];
                     const not_b = ['not', right];
@@ -587,6 +585,30 @@ class Parser {
             }
         }
         return expr_tree;
+    }
+
+    /**
+     * NEW METHOD: Recursively traverses the tree and injects the _INIT reset logic
+     * into every 'not' gate. This runs AFTER complex gates are transformed.
+     * @param {Array|string} expr_tree - The expression tree to process.
+     * @returns {Array|string} The modified expression tree.
+     */
+    _inject_init_reset(expr_tree) {
+        if (typeof expr_tree === 'string') {
+            return expr_tree;
+        }
+
+        // Recursively process operands first
+        const processed_operands = expr_tree.map(item => this._inject_init_reset(item));
+
+        // Check if the current node is a 'not' gate
+        if (Array.isArray(processed_operands) && processed_operands.length === 2 && processed_operands[0] === 'not') {
+            const operand = processed_operands[1];
+            const or_expression = [this._init_variable_name, 'or', operand];
+            return ['not', or_expression];
+        }
+        
+        return processed_operands;
     }
 
     _flatten_expr(expr) {
@@ -624,7 +646,6 @@ class Parser {
         let actual_definer = definer;
         let original_definer = definer;
 
-        // Output without definition: output X -> output X = X
         if (type === 'output' && line.length === 1) {
             line.push('=');
             line.push(line[0]);
@@ -635,7 +656,6 @@ class Parser {
         }
 
         if (this._variables[definer] || this._replacements[definer]) {
-            // Variable override: create temp variable and update mapping
             const temp_name = this._getTemporaryVariableName();
             this._replacements[definer] = temp_name;
             definer = temp_name;
@@ -657,9 +677,11 @@ class Parser {
             expression.push(item);
         }
 
+        // CORRECTED ORDER OF OPERATIONS
         const expr_tree_raw = this._parse_expression([...expression]);
         const expr_tree_fundamental = this._transform_complex_gates(expr_tree_raw);
-        const [final_var, temp_vars] = this._flatten_expr(expr_tree_fundamental);
+        const expr_tree_with_init = this._inject_init_reset(expr_tree_fundamental); // New step
+        const [final_var, temp_vars] = this._flatten_expr(expr_tree_with_init);
 
         for (const [temp_name, temp_expr] of temp_vars) {
             this._variables[temp_name] = { type: 'temp', value: temp_expr };
@@ -672,7 +694,6 @@ class Parser {
         this._replacements = {};
         this._temp_counter = 0;
 
-        // Automatically add the _INIT input variable
         this._variables[this._init_variable_name] = { type: 'input', value: null };
 
         const parsed = this._parse_statements(code);
@@ -729,7 +750,6 @@ class Parser {
         for (const [variable_name, data] of Object.entries(this._variables)) {
             if (data.type === 'input') {
                 const label = new Label(variable_name, -90);
-                // Use a StackableButton for the _INIT variable, otherwise use a StackableSwitch
                 if (variable_name === this._init_variable_name) {
                     data.wire = new StackableButton();
                 } else {
@@ -740,10 +760,10 @@ class Parser {
             } else if (['variable', 'temp', 'output'].includes(data.type)) {
                 const gate_info = Array.isArray(data.value) ? this._check_dict_matches(states, data.value) : null;
 
-                if (gate_info === null) { // Direct assignment: C = A
+                if (gate_info === null) {
                     data.wire = this._variables[data.value]?.wire;
                     if (!data.wire) throw new Error(`Wire for variable ${data.value} not found when defining ${variable_name}`);
-                } else { // It's a gate
+                } else {
                     const GateClass = gate_info[2];
                     const gate_instance = new GateClass();
                     data.wire = new StackableWire();
@@ -761,7 +781,6 @@ class Parser {
                         data.wire.connect(gate_instance, ConnectionConstants.tri_gate_output);
                     }
 
-                    // --- Connector stacking logic (180° rotation) ---
                     let last_connector = gate_connectors[gate_connectors.length - 1];
                     let free_cups = Object.keys(last_connector.cups)
                         .filter(k => !last_connector.cups[k] && parseInt(k) !== ConnectionConstants.connector_top_cup);
