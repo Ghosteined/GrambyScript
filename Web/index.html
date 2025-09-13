@@ -195,6 +195,8 @@
             [/\binput\b|\boutput\b/, 'keyword'],
             [/\band\b|\bor\b|\bnand\b|\bnor\b|\bxor\b|\bxnor\b|\bnot\b/, 'gate'],
             [/\/[^/]*\//, 'comment'],
+            // UPDATED: Added a rule for 0 and 1
+            [/\b[01]\b/, 'number'],
             [/[A-Z_][A-Z0-9_]*/, 'variable'],
             [/=|;/, 'delimiter'],
           ]
@@ -228,10 +230,25 @@
               documentation: 'Declare an output variable.',
               range: range,
             },
+            // UPDATED: Added 0 and 1 to suggestions
+            {
+              label: '0',
+              kind: monaco.languages.CompletionItemKind.Constant,
+              insertText: '0',
+              documentation: 'The INIT signal. HIGH (1) for one tick, then LOW (0).',
+              range: range,
+            },
+            {
+              label: '1',
+              kind: monaco.languages.CompletionItemKind.Constant,
+              insertText: '1',
+              documentation: 'The STEADY signal. LOW (0) for one tick, then HIGH (1).',
+              range: range,
+            },
             ...['and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not'].map(gate => ({
               label: gate,
               kind: monaco.languages.CompletionItemKind.Function,
-              insertText: gate.toUpperCase(),
+              insertText: gate, // Keep it lowercase for consistency
               documentation: `A ${gate.toUpperCase()} logic gate.`,
               range: range,
             })),
@@ -269,24 +286,23 @@
           { token: 'gate', foreground: 'C586C0' },
           { token: 'variable', foreground: '9CDCFE' },
           { token: 'comment', foreground: '6A9955' },
-          { token: 'delimiter', foreground: 'D4D4D4' }
+          { token: 'delimiter', foreground: 'D4D4D4' },
+          // UPDATED: Added color for numbers
+          { token: 'number', foreground: 'b5cea8' },
         ],
         colors: {}
       });
 
-      // --- NEW: LOAD SAVED FONT SIZE ---
       const FONT_SIZE_KEY = 'grambyEditorFontSize';
       const DEFAULT_FONT_SIZE = 14;
-      // Get the saved size from localStorage, or use the default if nothing is saved
       const initialFontSize = parseInt(localStorage.getItem(FONT_SIZE_KEY)) || DEFAULT_FONT_SIZE;
-      // --- END LOAD FONT SIZE ---
 
       const editor = monaco.editor.create(document.getElementById('container'), {
-        value: `/ Grambyscript example /\ninput A;\ninput B;\n\nRESULT = A and B;\noutput FINAL_OUT = RESULT;`,
+        value: `/ Grambyscript example /\ninput B;\noutput A;\n\n/ A is OFF at start, then follows B /\nA = B and 1;`,
         language: 'grambyscript',
         theme: 'gramby-dark',
         minimap: { enabled: false },
-        fontSize: initialFontSize // Use the loaded font size here
+        fontSize: initialFontSize
       });
 
       const fontDecreaseButton = document.getElementById('font-decrease');
@@ -299,7 +315,6 @@
         if (currentSize < MAX_FONT_SIZE) {
           const newSize = currentSize + 1;
           editor.updateOptions({ fontSize: newSize });
-          // --- NEW: SAVE FONT SIZE ---
           localStorage.setItem(FONT_SIZE_KEY, newSize);
         }
       });
@@ -309,7 +324,6 @@
         if (currentSize > MIN_FONT_SIZE) {
           const newSize = currentSize - 1;
           editor.updateOptions({ fontSize: newSize });
-          // --- NEW: SAVE FONT SIZE ---
           localStorage.setItem(FONT_SIZE_KEY, newSize);
         }
       });
@@ -322,19 +336,23 @@
       const outputText = document.getElementById('output-text');
 
       runButton.addEventListener('click', () => {
-        let code = editor.getValue();
-        code = code.replace(/\/.*?\//gs, '');
-        
-        let parser = new Parser();
-        let compileStack = new CompileStack();
-        parser.Variable = {};
+        try {
+            let code = editor.getValue();
+            
+            let parser = new Parser();
+            let compileStack = new CompileStack();
 
-        parser.PreCompile(code);
-        parser.Compile(compileStack);
+            parser.PreCompile(code);
+            parser.Compile(compileStack);
 
-        outputText.textContent = compileStack.terminate();
-        modalOverlay.style.display = 'block';
-        outputBox.style.display = 'block';
+            outputText.textContent = compileStack.terminate();
+        } catch (error) {
+            console.error("Compilation Error:", error);
+            outputText.textContent = "Error: " + error.message;
+        } finally {
+            modalOverlay.style.display = 'block';
+            outputBox.style.display = 'block';
+        }
       });
 
       copyIcon.addEventListener('click', () => {
